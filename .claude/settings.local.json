@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -i '' 's|/images/placeholder\\\\.jpg|/images/placeholder.svg|g' src/app/products/\\\\[slug\\\\]/ProductPageClient.tsx src/components/home/CollectionSection.tsx src/components/product/ProductGallery.tsx)",
+      "Bash(sed -i '' 's|/images/products/al-raqi/white-1\\\\.jpg|/images/products/placeholder-white.svg|g' src/components/home/HeroSection.tsx)",
+      "Bash(npm install *)",
+      "Bash(which node *)",
+      "Read(//Users/aboodkhazaleh/.nvm/**)",
+      "Read(//Users/aboodkhazaleh/.volta/**)",
+      "Bash(find /usr /opt /Users/aboodkhazaleh -name \"node\" -type f 2>/dev/null | head -5 ; find /Users/aboodkhazaleh -name \"npm\" -type f 2>/dev/null | head -5)",
+      "Bash(ls /opt/pkg/env/active/bin/ | grep -E \"node|npm|bun\" 2>/dev/null ; ls /opt/pmk/env/global/bin/ | grep -E \"node|npm|bun\" 2>/dev/null)",
+      "Bash(mdfind -name node)",
+      "Bash(mkdir -p \"/Users/aboodkhazaleh/WAQAR Page/.claude\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(command -v npm)",
+      "Bash(command -v npx)",
+      "Bash(env)",
+      "Bash(/bin/zsh -l -c 'which node; which npm; node --version')",
+      "Bash(/bin/bash -l -c 'which node; which npm; node --version')",
+      "Read(//opt/**)",
+      "Bash(curl -fsSL https://bun.sh/install)",
+      "Bash(bash)",
+      "Bash(~/.bun/bin/bun install *)",
+      "Bash(xargs kill -9)",
+      "Bash(curl -s -X POST http://localhost:3000/api/admin/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"waqar@2024\"}')",
+      "Bash(ipconfig getifaddr *)",
+      "Bash(awk '{print $2}')",
+      "Bash(curl -s -o /dev/null -w \"localhost:3000 status: %{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(lsof -nP -iTCP -sTCP:LISTEN)",
+      "Bash(HOSTNAME=0.0.0.0 ~/.bun/bin/bun run dev)",
+      "Bash(curl -s -o /dev/null -w \"Status: %{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(~/.bun/bin/bun add *)",
+      "Bash(gh auth *)",
+      "Bash(git --version)",
+      "Bash(git config *)",
+      "Read(//Users/aboodkhazaleh/**)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

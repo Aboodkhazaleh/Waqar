@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+  <rect width="800" height="1000" fill="#EDE0C4"/>
+  <rect x="180" y="70" width="440" height="580" rx="24" fill="#E5D6B0" stroke="#9BB4BC" stroke-width="0.8" stroke-opacity="0.3"/>
+  <ellipse cx="400" cy="72" rx="90" ry="34" fill="#DFD0A8" stroke="#9BB4BC" stroke-width="0.5" stroke-opacity="0.25"/>
+  <rect x="350" y="595" width="100" height="18" rx="6" fill="#3DB4C4" fill-opacity="0.2"/>
+  <line x1="180" y1="420" x2="620" y2="420" stroke="#3DB4C4" stroke-width="0.5" stroke-opacity="0.12"/>
+  <rect x="320" y="760" width="160" height="40" rx="8" fill="#3DB4C4" fill-opacity="0.06"/>
+  <text x="400" y="788" font-family="Cairo, Helvetica, sans-serif" font-size="22" fill="#2A8B99" fill-opacity="0.7" text-anchor="middle" dominant-baseline="middle" letter-spacing="2">كريمي</text>
+  <text x="400" y="870" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#3DB4C4" fill-opacity="0.4" text-anchor="middle" letter-spacing="6">WAQAR</text>
+</svg>

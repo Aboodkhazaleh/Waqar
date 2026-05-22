@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #3DB4C4;
+  --accent-light: #5FC9D9;
+  --accent-dark: #2A8B99;
+  --black: #000000;
+  --dark-1: #0A0A0A;
+  --dark-2: #121212;
+  --dark-3: #1A1A1A;
+  --cream: #F5F5F5;
+  --white: #FFFFFF;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html {
+  direction: rtl;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #000000;
+  color: #F5F5F5;
+  font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+::-webkit-scrollbar-thumb {
+  background: #3DB4C440;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3DB4C480;
+}
+
+/* Hide scrollbar on mobile */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+img {
+  transition: opacity 0.3s ease;
+}
+
+::selection {
+  background: #3DB4C430;
+  color: #FFFFFF;
+}
+
+.font-arabic {
+  font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
+}
+.font-display {
+  font-family: 'Amiri', serif;
+}
+
+/* Accent gradient text — now cyan */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #3DB4C4 0%, #5FC9D9 50%, #3DB4C4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-accent-gradient {
+  background: linear-gradient(135deg, #3DB4C4 0%, #5FC9D9 50%, #3DB4C4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Modern luxury solid white display text */
+.text-luxury-white {
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+
+.page-enter {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.5s ease;
+}
+
+.admin-body {
+  direction: ltr;
+  font-family: 'Cairo', sans-serif;
+}
+
+.luxury-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #3DB4C440, transparent);
+}
+
+/* Subtle grain for luxury feel */
+.grain-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  opacity: 0.025;
+}
