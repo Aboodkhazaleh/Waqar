@@ -26,6 +26,21 @@ import {
   defaultSiteSettings,
 } from "@/data/products";
 
+// Firestore rejects `undefined`. Recursively strip it from any value going to Firestore.
+function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((v) => stripUndefined(v)) as unknown as T;
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (v !== undefined) out[k] = stripUndefined(v as unknown);
+    }
+    return out as T;
+  }
+  return value;
+}
+
 // ============================================================
 // Read helpers (return defaults if Firestore not yet configured)
 // ============================================================
@@ -69,21 +84,20 @@ export async function fetchSettings(): Promise<SiteSettings> {
 // ============================================================
 export async function upsertProduct(product: Product): Promise<void> {
   if (!db) throw new Error("Firestore غير مهيأ — أضف بيانات Firebase في .env.local");
-  await setDoc(doc(db, COLLECTIONS.PRODUCTS, product.id), {
-    ...product,
-    updatedAt: new Date().toISOString(),
-  });
+  await setDoc(
+    doc(db, COLLECTIONS.PRODUCTS, product.id),
+    stripUndefined({ ...product, updatedAt: new Date().toISOString() })
+  );
 }
 
 export async function replaceAllProducts(products: Product[]): Promise<void> {
   if (!db) throw new Error("Firestore غير مهيأ");
   const batch = writeBatch(db);
-  // Note: in batch we cannot delete-all-then-create — but upsert each by id is enough for our use case.
   for (const p of products) {
-    batch.set(doc(db, COLLECTIONS.PRODUCTS, p.id), {
-      ...p,
-      updatedAt: new Date().toISOString(),
-    });
+    batch.set(
+      doc(db, COLLECTIONS.PRODUCTS, p.id),
+      stripUndefined({ ...p, updatedAt: new Date().toISOString() })
+    );
   }
   await batch.commit();
 }
@@ -95,7 +109,7 @@ export async function deleteProduct(id: string): Promise<void> {
 
 export async function addOrderFs(order: Order): Promise<void> {
   if (!db) throw new Error("Firestore غير مهيأ");
-  await setDoc(doc(db, COLLECTIONS.ORDERS, order.id), order);
+  await setDoc(doc(db, COLLECTIONS.ORDERS, order.id), stripUndefined(order));
 }
 
 export async function replaceAllOrders(orders: Order[]): Promise<void> {
@@ -109,7 +123,7 @@ export async function replaceAllOrders(orders: Order[]): Promise<void> {
     if (!newIds.has(d.id)) batch.delete(d.ref);
   });
   for (const o of orders) {
-    batch.set(doc(db, COLLECTIONS.ORDERS, o.id), o);
+    batch.set(doc(db, COLLECTIONS.ORDERS, o.id), stripUndefined(o));
   }
   await batch.commit();
 }
@@ -130,7 +144,10 @@ export async function deleteAllOrders(): Promise<number> {
 
 export async function saveSettingsFs(settings: SiteSettings): Promise<void> {
   if (!db) throw new Error("Firestore غير مهيأ");
-  await setDoc(doc(db, COLLECTIONS.SETTINGS, SETTINGS_DOC_ID), settings);
+  await setDoc(
+    doc(db, COLLECTIONS.SETTINGS, SETTINGS_DOC_ID),
+    stripUndefined(settings)
+  );
 }
 
 // ============================================================
@@ -192,39 +209,44 @@ export function subscribeSettings(
 }
 
 // ============================================================
-// Seed: push defaults if collection is empty (one-time bootstrap)
+// Seed: ensure all default products + settings exist in Firestore.
+// Idempotent — uses fixed document IDs so re-running is safe.
 // ============================================================
 export async function seedDefaultsIfEmpty(): Promise<{
   seededProducts: number;
   seededOrders: number;
   seededSettings: boolean;
+  totalProducts: number;
 }> {
   if (!db) throw new Error("Firestore غير مهيأ");
-  const result = { seededProducts: 0, seededOrders: 0, seededSettings: false };
 
-  // Products
-  const psnap = await getDocs(collection(db, COLLECTIONS.PRODUCTS));
-  if (psnap.empty) {
-    const batch = writeBatch(db);
-    for (const p of defaultProducts) {
-      batch.set(doc(db, COLLECTIONS.PRODUCTS, p.id), p);
-    }
-    await batch.commit();
-    result.seededProducts = defaultProducts.length;
+  // Always upsert all default products (setDoc with fixed IDs is idempotent —
+  // it creates or overwrites the documents matching our default IDs, but won't
+  // touch any other documents the user may have added manually).
+  const batch = writeBatch(db);
+  for (const p of defaultProducts) {
+    batch.set(doc(db, COLLECTIONS.PRODUCTS, p.id), stripUndefined(p));
   }
+  await batch.commit();
 
-  // Orders (only seed if explicitly requested — keep empty by default)
-  // Skipped intentionally — admin starts with a clean orders board.
+  // Count after seed
+  const psnap = await getDocs(collection(db, COLLECTIONS.PRODUCTS));
 
-  // Settings
+  // Settings — only create if missing (don't overwrite admin's edits)
   const setRef = doc(db, COLLECTIONS.SETTINGS, SETTINGS_DOC_ID);
   const setSnap = await getDoc(setRef);
+  let seededSettings = false;
   if (!setSnap.exists()) {
-    await setDoc(setRef, defaultSiteSettings);
-    result.seededSettings = true;
+    await setDoc(setRef, stripUndefined(defaultSiteSettings));
+    seededSettings = true;
   }
 
-  return result;
+  return {
+    seededProducts: defaultProducts.length,
+    seededOrders: 0,
+    seededSettings,
+    totalProducts: psnap.size,
+  };
 }
 
 export { isFirebaseConfigured };

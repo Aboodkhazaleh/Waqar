@@ -1,0 +1,28 @@
+// Firestore Security Rules for Waqar
+// Copy this into Firebase Console → Firestore → Rules → Publish
+//
+// For now: permissive (works out of the box for dev + single-admin setups).
+// For production with multiple users, replace `if true` with auth checks.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Products: public read (storefront), open write (admin protected at API layer via JWT cookie)
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Settings (announcement bar, socials, WhatsApp): public read, open write
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Orders: open for admin (no public storefront read)
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+  }
+}
