@@ -19,12 +19,13 @@ import {
   COLLECTIONS,
   SETTINGS_DOC_ID,
 } from "./firebase";
-import type { Product, Order, SiteSettings } from "@/types";
+import type { Product, Order, SiteSettings, Size } from "@/types";
 import {
   products as defaultProducts,
   mockOrders as defaultOrders,
   defaultSiteSettings,
 } from "@/data/products";
+import { defaultSizes } from "@/data/sizes";
 
 // Firestore rejects `undefined`. Recursively strip it from any value going to Firestore.
 function stripUndefined<T>(value: T): T {
@@ -151,6 +152,43 @@ export async function saveSettingsFs(settings: SiteSettings): Promise<void> {
 }
 
 // ============================================================
+// Sizes (managed by admin, real-time)
+// ============================================================
+export async function fetchSizes(): Promise<Size[]> {
+  if (!db) return defaultSizes;
+  const snap = await getDocs(
+    query(collection(db, COLLECTIONS.SIZES), orderBy("displayOrder", "asc"))
+  );
+  if (snap.empty) return defaultSizes;
+  return snap.docs.map((d) => d.data() as Size);
+}
+
+export async function upsertSize(size: Size): Promise<void> {
+  if (!db) throw new Error("Firestore غير مهيأ");
+  await setDoc(
+    doc(db, COLLECTIONS.SIZES, size.id),
+    stripUndefined({ ...size, updatedAt: new Date().toISOString() })
+  );
+}
+
+export async function deleteSize(id: string): Promise<void> {
+  if (!db) throw new Error("Firestore غير مهيأ");
+  await deleteDoc(doc(db, COLLECTIONS.SIZES, id));
+}
+
+export async function replaceAllSizes(sizes: Size[]): Promise<void> {
+  if (!db) throw new Error("Firestore غير مهيأ");
+  const batch = writeBatch(db);
+  for (const s of sizes) {
+    batch.set(
+      doc(db, COLLECTIONS.SIZES, s.id),
+      stripUndefined({ ...s, updatedAt: new Date().toISOString() })
+    );
+  }
+  await batch.commit();
+}
+
+// ============================================================
 // Real-time subscriptions (for client components)
 // ============================================================
 export function subscribeProducts(
@@ -208,6 +246,24 @@ export function subscribeSettings(
   );
 }
 
+export function subscribeSizes(
+  callback: (sizes: Size[]) => void,
+  onError?: (err: Error) => void
+): Unsubscribe {
+  if (!db) {
+    callback(defaultSizes);
+    return () => {};
+  }
+  return onSnapshot(
+    query(collection(db, COLLECTIONS.SIZES), orderBy("displayOrder", "asc")),
+    (snap) => {
+      const sizes = snap.docs.map((d) => d.data() as Size);
+      callback(sizes.length > 0 ? sizes : defaultSizes);
+    },
+    (err) => onError?.(err)
+  );
+}
+
 // ============================================================
 // Seed: ensure all default products + settings exist in Firestore.
 // Idempotent — uses fixed document IDs so re-running is safe.
@@ -216,20 +272,18 @@ export async function seedDefaultsIfEmpty(): Promise<{
   seededProducts: number;
   seededOrders: number;
   seededSettings: boolean;
+  seededSizes: number;
   totalProducts: number;
+  totalSizes: number;
 }> {
   if (!db) throw new Error("Firestore غير مهيأ");
 
-  // Always upsert all default products (setDoc with fixed IDs is idempotent —
-  // it creates or overwrites the documents matching our default IDs, but won't
-  // touch any other documents the user may have added manually).
-  const batch = writeBatch(db);
+  // Always upsert all default products (idempotent via fixed IDs)
+  const productBatch = writeBatch(db);
   for (const p of defaultProducts) {
-    batch.set(doc(db, COLLECTIONS.PRODUCTS, p.id), stripUndefined(p));
+    productBatch.set(doc(db, COLLECTIONS.PRODUCTS, p.id), stripUndefined(p));
   }
-  await batch.commit();
-
-  // Count after seed
+  await productBatch.commit();
   const psnap = await getDocs(collection(db, COLLECTIONS.PRODUCTS));
 
   // Settings — only create if missing (don't overwrite admin's edits)
@@ -241,11 +295,29 @@ export async function seedDefaultsIfEmpty(): Promise<{
     seededSettings = true;
   }
 
+  // Sizes — seed only ones that don't already exist (preserve admin edits)
+  const sizesSnap = await getDocs(collection(db, COLLECTIONS.SIZES));
+  const existingSizeIds = new Set(sizesSnap.docs.map((d) => d.id));
+  let seededSizes = 0;
+  if (existingSizeIds.size < defaultSizes.length) {
+    const sizeBatch = writeBatch(db);
+    for (const s of defaultSizes) {
+      if (!existingSizeIds.has(s.id)) {
+        sizeBatch.set(doc(db, COLLECTIONS.SIZES, s.id), stripUndefined(s));
+        seededSizes++;
+      }
+    }
+    if (seededSizes > 0) await sizeBatch.commit();
+  }
+  const finalSizesSnap = await getDocs(collection(db, COLLECTIONS.SIZES));
+
   return {
     seededProducts: defaultProducts.length,
     seededOrders: 0,
     seededSettings,
+    seededSizes,
     totalProducts: psnap.size,
+    totalSizes: finalSizesSnap.size,
   };
 }
 

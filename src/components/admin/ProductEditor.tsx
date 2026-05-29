@@ -6,11 +6,12 @@ import {
   X, Save, Trash2, Plus, Globe, Palette, Package, Tag,
   Layers, AlertCircle, Check, Languages, ChevronDown,
 } from "lucide-react";
-import type { Product, ColorVariant } from "@/types";
+import type { Product, ColorVariant, Size } from "@/types";
 import { AVAILABLE_BADGES } from "@/types";
 import ImageUploader from "./ImageUploader";
 import { formatPrice } from "@/lib/utils";
 import { categories } from "@/data/categories";
+import { subscribeSizes } from "@/lib/firestore";
 
 interface ProductEditorProps {
   product: Product;
@@ -504,8 +505,6 @@ function ColorsTab({ draft, updateColor, addColor, removeColor }: ColorsTabProps
 // =================================================================
 // ----- TAB: INVENTORY (price, sizes) -----
 // =================================================================
-const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
-
 interface InventoryTabProps {
   draft: Product;
   set: <K extends keyof Product>(key: K, value: Product[K]) => void;
@@ -513,6 +512,25 @@ interface InventoryTabProps {
 }
 function InventoryTab({ draft, set, toggleSize }: InventoryTabProps) {
   const totalStock = draft.colors.reduce((sum, c) => sum + c.stockQuantity, 0);
+
+  // Sizes from Firestore (live-synced — admin can add/edit/disable from /admin/sizes)
+  const [availableSizes, setAvailableSizes] = useState<Size[]>([]);
+  useEffect(() => {
+    const unsub = subscribeSizes((next) => setAvailableSizes(next));
+    return () => unsub();
+  }, []);
+
+  // Active sizes only, sorted by displayOrder. Also include any custom legacy
+  // sizes the product already has (so they stay visible even if removed from admin).
+  const sizeOptions = [
+    ...availableSizes
+      .filter((s) => s.isActive)
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((s) => s.label),
+    ...draft.sizes.filter(
+      (label) => !availableSizes.some((s) => s.label === label && s.isActive)
+    ),
+  ];
 
   return (
     <div className="flex flex-col gap-5">
@@ -563,25 +581,44 @@ function InventoryTab({ draft, set, toggleSize }: InventoryTabProps) {
             {draft.sizes.length} مقاس
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {SIZE_OPTIONS.map((s) => {
-            const isOn = draft.sizes.includes(s);
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => toggleSize(s)}
-                className={`px-4 py-2 rounded-lg font-arabic font-semibold text-xs transition-all ${
-                  isOn
-                    ? "bg-[#3DB4C4] text-black"
-                    : "bg-[#1C1C1C] text-white/40 border border-[#2A2A2A] hover:text-white"
-                }`}
-              >
-                {s}
-              </button>
-            );
-          })}
-        </div>
+        {availableSizes.length === 0 ? (
+          <p className="font-arabic text-xs text-white/40 leading-7">
+            لا توجد مقاسات مُعرّفة بعد.{" "}
+            <a
+              href="/admin/sizes"
+              className="text-[#3DB4C4] hover:text-[#5FC9D9] underline"
+            >
+              أضف مقاسات من صفحة "إدارة المقاسات"
+            </a>
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {sizeOptions.map((s) => {
+              const isOn = draft.sizes.includes(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleSize(s)}
+                  className={`px-4 py-2 rounded-lg font-arabic font-semibold text-xs transition-all ${
+                    isOn
+                      ? "bg-[#3DB4C4] text-black"
+                      : "bg-[#1C1C1C] text-white/40 border border-[#2A2A2A] hover:text-white"
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <p className="font-arabic text-[11px] text-white/30">
+          المقاسات تُدار من{" "}
+          <a href="/admin/sizes" className="text-[#3DB4C4] hover:underline">
+            صفحة "إدارة المقاسات"
+          </a>
+          . المُعطّلة لا تظهر هنا.
+        </p>
       </div>
 
       {/* Stock summary */}

@@ -14,11 +14,13 @@ import {
   X,
   ChevronLeft,
   BarChart3,
+  Ruler,
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "لوحة التحكم" },
   { href: "/admin/products", icon: Package, label: "المنتجات" },
+  { href: "/admin/sizes", icon: Ruler, label: "المقاسات" },
   { href: "/admin/orders", icon: ShoppingBag, label: "الطلبات" },
   { href: "/admin/settings", icon: Settings, label: "الإعدادات" },
 ];

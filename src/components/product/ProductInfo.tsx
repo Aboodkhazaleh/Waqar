@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Product } from "@/types";
+import type { Product, Size } from "@/types";
 import ColorSelector from "./ColorSelector";
 import SizeSelector from "./SizeSelector";
 import QuantitySelector from "./QuantitySelector";
 import Button from "@/components/ui/Button";
 import { formatPrice, getDiscountPercentage, buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/utils";
 import { ShoppingBag, Shield, Truck, RefreshCw, Star, ChevronDown } from "lucide-react";
+import { subscribeSizes } from "@/lib/firestore";
 
 interface ProductInfoProps {
   product: Product;
@@ -21,6 +22,23 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
   const [quantity, setQuantity] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
+  const [allSizes, setAllSizes] = useState<Size[]>([]);
+
+  // Real-time subscribe to sizes — so disabling a size in admin hides it instantly
+  useEffect(() => {
+    const unsub = subscribeSizes((next) => setAllSizes(next));
+    return () => unsub();
+  }, []);
+
+  // Only show product sizes that are still active in the admin-managed sizes list.
+  // (If a size hasn't loaded yet, fall back to product.sizes as-is.)
+  const visibleSizes = useMemo(() => {
+    if (allSizes.length === 0) return product.sizes;
+    const activeLabels = new Set(
+      allSizes.filter((s) => s.isActive).map((s) => s.label)
+    );
+    return product.sizes.filter((label) => activeLabels.has(label));
+  }, [product.sizes, allSizes]);
 
   const selectedColor = product.colors.find((c) => c.id === selectedColorId);
   const isSoldOut = selectedColor?.isSoldOut ?? false;
@@ -100,7 +118,7 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
 
       {/* Size */}
       <SizeSelector
-        sizes={product.sizes}
+        sizes={visibleSizes}
         selectedSize={selectedSize}
         onSelect={setSelectedSize}
       />

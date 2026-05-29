@@ -94,3 +94,13 @@ export const AVAILABLE_BADGES = [
   { value: "حصري", labelEn: "EXCLUSIVE" },
   { value: "قريباً", labelEn: "SOON" },
 ] as const;
+
+// Size — managed by admin, stored in Firestore "sizes" collection
+export interface Size {
+  id: string;
+  label: string;        // Display label, e.g. "M", "56", "One Size"
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}

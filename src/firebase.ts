@@ -72,6 +72,7 @@ export const COLLECTIONS = {
   PRODUCTS: "products",
   ORDERS: "orders",
   SETTINGS: "settings",
+  SIZES: "sizes",
 } as const;
 
 export const SETTINGS_DOC_ID = "global";
