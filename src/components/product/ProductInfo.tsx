@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Product, Size } from "@/types";
 import ColorSelector from "./ColorSelector";
-import SizeSelector from "./SizeSelector";
+import SizeSelector, { type SizeRowKey } from "./SizeSelector";
 import QuantitySelector from "./QuantitySelector";
 import Button from "@/components/ui/Button";
 import { formatPrice, getDiscountPercentage, buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/utils";
@@ -18,7 +18,12 @@ interface ProductInfoProps {
 }
 
 export default function ProductInfo({ product, onColorChange, selectedColorId }: ProductInfoProps) {
-  const [selectedSize, setSelectedSize] = useState("");
+  // Independent selection per row — customer can pick a letter AND a number simultaneously
+  const [sizeSelection, setSizeSelection] = useState({
+    letter: "",
+    number: "",
+    other: "",
+  });
   const [quantity, setQuantity] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
@@ -44,21 +49,35 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
   const isSoldOut = selectedColor?.isSoldOut ?? false;
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "966500000000";
 
+  // Combined size string for orders/WhatsApp — joins whatever rows the customer picked.
+  // E.g. "M / 60", "M", "60", or "" if nothing chosen yet.
+  const combinedSize = [
+    sizeSelection.letter,
+    sizeSelection.number,
+    sizeSelection.other,
+  ]
+    .filter(Boolean)
+    .join(" / ");
+
   const handleOrder = () => {
     setError("");
-    if (!selectedSize) {
+    if (!combinedSize) {
       setError("الرجاء اختيار المقاس أولاً");
       return;
     }
     const msg = buildWhatsAppMessage({
       productName: product.nameAr,
       colorName: selectedColor?.nameAr ?? "",
-      size: selectedSize,
+      size: combinedSize,
       quantity,
       price: product.price,
       currency: product.currency,
     });
     window.open(buildWhatsAppUrl(whatsappNumber, msg), "_blank");
+  };
+
+  const handleSizeChange = (row: SizeRowKey, value: string) => {
+    setSizeSelection((prev) => ({ ...prev, [row]: value }));
   };
 
   return (
@@ -116,11 +135,11 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
         onSelect={onColorChange}
       />
 
-      {/* Size */}
+      {/* Size — letter row + number row are independent */}
       <SizeSelector
         sizes={visibleSizes}
-        selectedSize={selectedSize}
-        onSelect={setSelectedSize}
+        selection={sizeSelection}
+        onChange={handleSizeChange}
       />
 
       {/* Quantity */}

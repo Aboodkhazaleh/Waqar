@@ -4,53 +4,66 @@ import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { splitSizesIntoRows } from "@/lib/sizeMapping";
 
+export type SizeRowKey = "letter" | "number" | "other";
+
 interface SizeSelectorProps {
   sizes: string[];
-  selectedSize: string;
-  onSelect: (size: string) => void;
+  /** Selection per row — each row is independent. */
+  selection: { letter: string; number: string; other: string };
+  /** Fires when a button is clicked. row tells which row owns the value. */
+  onChange: (row: SizeRowKey, value: string) => void;
 }
 
 export default function SizeSelector({
   sizes,
-  selectedSize,
-  onSelect,
+  selection,
+  onChange,
 }: SizeSelectorProps) {
-  // Two-row visual layout (letters + numbers), but each button is independent.
-  // Selecting a letter does NOT auto-select its number counterpart.
   const { letterRow, numberRow, others } = useMemo(
     () => splitSizesIntoRows(sizes),
     [sizes]
   );
 
-  const isHighlighted = (size: string) => size === selectedSize;
+  // Build a one-line display label out of all currently chosen rows.
+  // e.g. "M / 60", "M", "60", or empty when nothing selected.
+  const displayLabel = [selection.letter, selection.number, selection.other]
+    .filter(Boolean)
+    .join(" / ");
+
+  // Clicking an already-selected button in a row clears that row.
+  // This lets the customer "remove" their letter-pick without changing the number-pick.
+  const handleClick = (row: SizeRowKey, value: string) => {
+    if (selection[row] === value) onChange(row, "");
+    else onChange(row, value);
+  };
 
   return (
     <div className="flex flex-col gap-3">
       {/* Label row */}
       <div className="flex items-center justify-between">
         <span className="font-arabic text-sm text-cream/60">المقاس</span>
-        {selectedSize && (
+        {displayLabel && (
           <span className="font-arabic text-sm text-cream font-medium">
-            مقاس {selectedSize}
+            مقاس {displayLabel}
           </span>
         )}
       </div>
 
-      {/* Row 1 — Letter sizes (XS, S, M, L, XL, XXL, XXXL ...) */}
+      {/* Row 1 — Letter sizes */}
       {letterRow.length > 0 && (
         <SizeRow
           sizes={letterRow}
-          isHighlighted={isHighlighted}
-          onSelect={onSelect}
+          selectedValue={selection.letter}
+          onClick={(v) => handleClick("letter", v)}
         />
       )}
 
-      {/* Row 2 — Number sizes (52, 54, 56, 58, 60, 62, 64 ...) */}
+      {/* Row 2 — Number sizes */}
       {numberRow.length > 0 && (
         <SizeRow
           sizes={numberRow}
-          isHighlighted={isHighlighted}
-          onSelect={onSelect}
+          selectedValue={selection.number}
+          onClick={(v) => handleClick("number", v)}
         />
       )}
 
@@ -58,35 +71,35 @@ export default function SizeSelector({
       {others.length > 0 && (
         <SizeRow
           sizes={others}
-          isHighlighted={isHighlighted}
-          onSelect={onSelect}
+          selectedValue={selection.other}
+          onClick={(v) => handleClick("other", v)}
         />
       )}
 
       <p className="font-arabic text-xs text-cream/30">
-        * إذا كنت بين مقاسين، اختر المقاس الأكبر للراحة المثلى
+        * يمكنك اختيار مقاس من الحروف ومقاس من الأرقام معاً
       </p>
     </div>
   );
 }
 
 // =====================================================================
-// One row of size buttons — shared between letter row, number row, etc.
+// One row of size buttons — each row is independent.
 // =====================================================================
 interface SizeRowProps {
   sizes: string[];
-  isHighlighted: (s: string) => boolean;
-  onSelect: (s: string) => void;
+  selectedValue: string;
+  onClick: (value: string) => void;
 }
-function SizeRow({ sizes, isHighlighted, onSelect }: SizeRowProps) {
+function SizeRow({ sizes, selectedValue, onClick }: SizeRowProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {sizes.map((size) => {
-        const highlighted = isHighlighted(size);
+        const highlighted = size === selectedValue;
         return (
           <motion.button
             key={size}
-            onClick={() => onSelect(size)}
+            onClick={() => onClick(size)}
             whileTap={{ scale: 0.94 }}
             className={`relative w-12 h-12 rounded-xl font-arabic font-semibold text-sm transition-all duration-300 ${
               highlighted
