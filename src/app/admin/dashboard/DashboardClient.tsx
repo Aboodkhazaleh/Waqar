@@ -181,7 +181,14 @@ export default function DashboardClient({ initialProducts, initialOrders }: Prop
                   className="border-b border-[#1C1C1C]/50 hover:bg-[#1C1C1C]/50 transition-colors"
                 >
                   <td className="px-4 py-3 font-arabic text-xs text-[#3DB4C4]">{order.id}</td>
-                  <td className="px-4 py-3 font-arabic text-sm text-white">{order.productName}</td>
+                  <td className="px-4 py-3 font-arabic text-sm text-white">
+                    {order.productName}
+                    {order.items && order.items.length > 1 && (
+                      <span className="ml-1 text-[10px] text-[#3DB4C4]/70">
+                        ({order.items.length} منتجات)
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-arabic text-sm text-white/60">{order.colorName}</td>
                   <td className="px-4 py-3 font-arabic text-sm text-white/60">{order.size}</td>
                   <td className="px-4 py-3 font-arabic text-sm text-white">

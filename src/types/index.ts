@@ -37,8 +37,26 @@ export interface Product {
   updatedAt: string;
 }
 
+/** A single line item inside a multi-product order. */
+export interface OrderItem {
+  productId: string;
+  productSlug?: string;
+  productName: string;
+  colorId: string;
+  colorName: string;
+  colorHex?: string;
+  size: string;
+  quantity: number;
+  price: number;
+  currency: string;
+  image?: string;
+}
+
 export interface Order {
   id: string;
+  // Legacy single-product fields — kept so old orders + the existing admin
+  // table render without changes. For multi-item orders, `productName` is set
+  // to "<first> +N" so the row still reads cleanly.
   productId: string;
   productName: string;
   colorId: string;
@@ -47,6 +65,8 @@ export interface Order {
   quantity: number;
   totalPrice: number;
   currency?: string;
+  // New multi-item shape. Always present on orders created through the cart.
+  items?: OrderItem[];
   customerName?: string;
   customerPhone?: string;
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
@@ -61,9 +81,6 @@ export interface SiteSettings {
   announcementBar: string;
   showAnnouncementBar: boolean;
   instagramUrl?: string;
-  twitterUrl?: string;
-  snapchatUrl?: string;
-  tiktokUrl?: string;
 }
 
 export interface AdminStats {

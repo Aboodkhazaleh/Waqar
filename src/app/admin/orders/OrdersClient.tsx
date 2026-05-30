@@ -216,16 +216,51 @@ export default function OrdersClient({ initialOrders }: Props) {
                       {order.id}
                     </td>
                     <td className="px-3 py-3">
-                      <p className="font-arabic text-sm text-white">{order.productName}</p>
-                      {order.customerName && (
-                        <p className="font-arabic text-xs text-white/35">{order.customerName}</p>
+                      {order.items && order.items.length > 0 ? (
+                        <div className="flex flex-col gap-1.5">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex items-start gap-1.5">
+                              <span className="font-mono text-[10px] text-[#3DB4C4]/60 mt-0.5">
+                                #{idx + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="font-arabic text-sm text-white">
+                                  {item.productName}
+                                  <span className="text-white/40 text-xs">
+                                    {" "}× {item.quantity}
+                                  </span>
+                                </p>
+                                <p className="font-arabic text-[11px] text-white/40">
+                                  {item.colorName} • مقاس {item.size}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {order.customerName && (
+                            <p className="font-arabic text-[11px] text-white/30 mt-1 border-t border-[#1C1C1C] pt-1">
+                              👤 {order.customerName}
+                              {order.customerPhone && ` • ${order.customerPhone}`}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <p className="font-arabic text-sm text-white">{order.productName}</p>
+                          {order.customerName && (
+                            <p className="font-arabic text-xs text-white/35">{order.customerName}</p>
+                          )}
+                        </>
                       )}
                     </td>
                     <td className="px-3 py-3 font-arabic text-sm text-white/60 whitespace-nowrap">
-                      {order.colorName} / {order.size}
+                      {order.items && order.items.length > 1
+                        ? `${order.items.length} منتجات`
+                        : `${order.colorName} / ${order.size}`}
                     </td>
                     <td className="px-3 py-3 font-arabic text-sm text-white/60 text-center">
-                      {order.quantity}
+                      {order.items
+                        ? order.items.reduce((s, i) => s + i.quantity, 0)
+                        : order.quantity}
                     </td>
                     <td className="px-3 py-3 font-arabic text-sm text-white whitespace-nowrap">
                       {formatPrice(order.totalPrice, order.currency)}

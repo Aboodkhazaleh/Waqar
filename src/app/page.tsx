@@ -33,12 +33,7 @@ export default async function HomePage() {
 
       <Footer
         whatsappNumber={settings.whatsappNumber}
-        socials={{
-          instagram: settings.instagramUrl,
-          twitter: settings.twitterUrl,
-          snapchat: settings.snapchatUrl,
-          tiktok: settings.tiktokUrl,
-        }}
+        socials={{ instagram: settings.instagramUrl }}
       />
       <WhatsAppButton phone={settings.whatsappNumber} />
     </main>

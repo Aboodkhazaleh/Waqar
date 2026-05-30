@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import CartWrapper from "@/components/cart/CartWrapper";
 
 export const metadata: Metadata = {
   title: "وقار | أزياء أردنية فاخرة",
@@ -43,7 +44,11 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="grain-overlay">{children}</body>
+      <body className="grain-overlay">
+        <CartWrapper initialWhatsappNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}>
+          {children}
+        </CartWrapper>
+      </body>
     </html>
   );
 }

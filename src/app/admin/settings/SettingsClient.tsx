@@ -152,24 +152,6 @@ export default function SettingsClient({ initialSettings }: Props) {
           onChange={(v) => setSettings({ ...settings, instagramUrl: v })}
           placeholder="https://instagram.com/..."
         />
-        <Field
-          label="تويتر / X"
-          value={settings.twitterUrl ?? ""}
-          onChange={(v) => setSettings({ ...settings, twitterUrl: v })}
-          placeholder="https://twitter.com/..."
-        />
-        <Field
-          label="سناب شات"
-          value={settings.snapchatUrl ?? ""}
-          onChange={(v) => setSettings({ ...settings, snapchatUrl: v })}
-          placeholder="https://snapchat.com/..."
-        />
-        <Field
-          label="تيك توك"
-          value={settings.tiktokUrl ?? ""}
-          onChange={(v) => setSettings({ ...settings, tiktokUrl: v })}
-          placeholder="https://tiktok.com/..."
-        />
       </div>
 
       <button

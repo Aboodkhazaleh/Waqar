@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ShoppingBag } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import CartIcon from "@/components/cart/CartIcon";
 
 const navLinks = [
   { href: "/", label: "الرئيسية" },
@@ -81,16 +82,8 @@ export default function Navbar() {
             </Link>
 
             {/* Right side */}
-            <div className="flex items-center gap-4">
-              <Link
-                href="/products/al-raqi"
-                className="hidden md:flex items-center gap-2 text-cream/70 hover:text-gold transition-colors duration-300"
-              >
-                <ShoppingBag size={18} />
-                <span className="font-arabic text-sm">تسوق الآن</span>
-              </Link>
-              {/* Spacer for mobile */}
-              <div className="md:hidden w-8" />
+            <div className="flex items-center gap-1">
+              <CartIcon />
             </div>
           </div>
         </div>
