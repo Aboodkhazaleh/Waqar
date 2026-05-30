@@ -37,19 +37,59 @@ export default function ProductInfo({
   });
   const [selectedDesignId, setSelectedDesignId] = useState("");
   const [selectedClosureId, setSelectedClosureId] = useState("");
+  const [customText, setCustomText] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
   const [allSizes, setAllSizes] = useState<Size[]>([]);
 
+  // Order-behavior flags (defaults preserve old behavior)
+  const requiresSize = product.requiresSize !== false; // true unless explicitly set false
+  const customField = product.customField;
+
+  // Filter designs/closures by the currently-selected color (when the option
+  // restricts itself to specific colors via allowedColorIds).
+  const visibleDesigns = useMemo(() => {
+    if (!product.designs) return [];
+    return product.designs.filter((d) => {
+      if (!d.isActive) return false;
+      if (!d.allowedColorIds || d.allowedColorIds.length === 0) return true;
+      return d.allowedColorIds.includes(selectedColorId);
+    });
+  }, [product.designs, selectedColorId]);
+
+  const visibleClosures = useMemo(() => {
+    if (!product.closures) return [];
+    return product.closures.filter((c) => {
+      if (!c.isActive) return false;
+      if (!c.allowedColorIds || c.allowedColorIds.length === 0) return true;
+      return c.allowedColorIds.includes(selectedColorId);
+    });
+  }, [product.closures, selectedColorId]);
+
+  // If the currently-selected design/closure is no longer valid for the new color,
+  // clear it (and notify the parent so the gallery falls back).
+  useEffect(() => {
+    if (selectedDesignId && !visibleDesigns.some((d) => d.id === selectedDesignId)) {
+      setSelectedDesignId("");
+      onDesignChange?.("");
+    }
+  }, [visibleDesigns, selectedDesignId, onDesignChange]);
+  useEffect(() => {
+    if (selectedClosureId && !visibleClosures.some((c) => c.id === selectedClosureId)) {
+      setSelectedClosureId("");
+      onClosureChange?.("");
+    }
+  }, [visibleClosures, selectedClosureId, onClosureChange]);
+
   // Look up selected design / closure objects (live derived from current selection)
   const selectedDesign = useMemo(
-    () => product.designs?.find((d) => d.id === selectedDesignId && d.isActive),
-    [product.designs, selectedDesignId]
+    () => visibleDesigns.find((d) => d.id === selectedDesignId),
+    [visibleDesigns, selectedDesignId]
   );
   const selectedClosure = useMemo(
-    () => product.closures?.find((c) => c.id === selectedClosureId && c.isActive),
-    [product.closures, selectedClosureId]
+    () => visibleClosures.find((c) => c.id === selectedClosureId),
+    [visibleClosures, selectedClosureId]
   );
 
   // Effective price = base + design adjustment + closure adjustment
@@ -91,17 +131,30 @@ export default function ProductInfo({
     .filter(Boolean)
     .join(" / ");
 
+  // Shared validation — used by both "Order via WhatsApp" and "Add to Cart"
+  const validate = (): string | null => {
+    if (requiresSize && !combinedSize) return "الرجاء اختيار المقاس أولاً";
+    if (customField?.required && !customText.trim()) {
+      return `الرجاء تعبئة "${customField.label}"`;
+    }
+    return null;
+  };
+
   const handleOrder = () => {
     setError("");
-    if (!combinedSize) {
-      setError("الرجاء اختيار المقاس أولاً");
+    const err = validate();
+    if (err) {
+      setError(err);
       return;
     }
-    // Include optional design/closure in the WhatsApp message so the shop
-    // sees the exact variant when the customer goes direct.
+    // Include optional design/closure + engraving in the WhatsApp message so
+    // the shop sees the exact variant when the customer goes direct.
     const variantSuffix = [
       selectedDesign && `تصميم: ${selectedDesign.nameAr}`,
       selectedClosure && `إغلاق: ${selectedClosure.nameAr}`,
+      customText.trim() &&
+        customField &&
+        `${customField.label}: ${customText.trim()}`,
     ]
       .filter(Boolean)
       .join(" • ");
@@ -112,7 +165,7 @@ export default function ProductInfo({
     const msg = buildWhatsAppMessage({
       productName: productLabel,
       colorName: selectedColor?.nameAr ?? "",
-      size: combinedSize,
+      size: combinedSize || "—",
       quantity,
       price: effectivePrice,
       currency: product.currency,
@@ -127,12 +180,13 @@ export default function ProductInfo({
   const { addItem } = useCart();
   const handleAddToCart = () => {
     setError("");
-    if (!combinedSize) {
-      setError("الرجاء اختيار المقاس أولاً");
-      return;
-    }
     if (!selectedColor) {
       setError("الرجاء اختيار اللون أولاً");
+      return;
+    }
+    const err = validate();
+    if (err) {
+      setError(err);
       return;
     }
     addItem({
@@ -142,7 +196,9 @@ export default function ProductInfo({
       colorId: selectedColor.id,
       colorName: selectedColor.nameAr,
       colorHex: selectedColor.hex,
-      size: combinedSize,
+      // When the product doesn't require a size, store "—" so the cart line
+      // still renders consistently and the cart key stays stable.
+      size: combinedSize || (requiresSize ? "" : "—"),
       quantity,
       price: effectivePrice,
       currency: product.currency,
@@ -155,6 +211,7 @@ export default function ProductInfo({
       designName: selectedDesign?.nameAr,
       closureId: selectedClosure?.id,
       closureName: selectedClosure?.nameAr,
+      customText: customText.trim() || undefined,
     });
   };
 
@@ -218,11 +275,11 @@ export default function ProductInfo({
         onSelect={onColorChange}
       />
 
-      {/* Design — only when the product defines it (e.g. الراقي) */}
-      {product.designs && product.designs.some((d) => d.isActive) && (
+      {/* Design — filtered to the current color (option may restrict itself via allowedColorIds) */}
+      {visibleDesigns.length > 0 && (
         <OptionPicker
           label="التصميم"
-          options={product.designs}
+          options={visibleDesigns}
           selectedId={selectedDesignId}
           currency={product.currency}
           onSelect={(id) => {
@@ -232,11 +289,11 @@ export default function ProductInfo({
         />
       )}
 
-      {/* Closure — only when the product defines it (e.g. الراقي) */}
-      {product.closures && product.closures.some((c) => c.isActive) && (
+      {/* Closure — filtered to the current color */}
+      {visibleClosures.length > 0 && (
         <OptionPicker
           label="نوع الإغلاق"
-          options={product.closures}
+          options={visibleClosures}
           selectedId={selectedClosureId}
           currency={product.currency}
           onSelect={(id) => {
@@ -246,13 +303,47 @@ export default function ProductInfo({
         />
       )}
 
-      {/* Size — letter row + number row are independent (or matrix-gated for al-raqi) */}
-      <SizeSelector
-        sizes={visibleSizes}
-        selection={sizeSelection}
-        onChange={handleSizeChange}
-        sizeMatrix={product.sizeMatrix}
-      />
+      {/* Size — letter row + number row are independent (or matrix-gated for al-raqi).
+          Hidden entirely when the product opts out (e.g. مسابح). */}
+      {requiresSize && (
+        <SizeSelector
+          sizes={visibleSizes}
+          selection={sizeSelection}
+          onChange={handleSizeChange}
+          sizeMatrix={product.sizeMatrix}
+        />
+      )}
+
+      {/* Custom free-text field — e.g. engraving name on مسابح */}
+      {customField && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label className="font-arabic text-sm text-cream/60">
+              {customField.label}
+              {customField.required && <span className="text-red-400 mr-1">*</span>}
+            </label>
+            {customField.maxLength && (
+              <span className="font-arabic text-[11px] text-cream/30">
+                {customText.length}/{customField.maxLength}
+              </span>
+            )}
+          </div>
+          <input
+            type="text"
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            maxLength={customField.maxLength ?? 50}
+            placeholder={customField.placeholder ?? ""}
+            className="bg-dark-3 border border-dark-5 text-cream font-arabic text-sm rounded-xl px-4 py-3 placeholder:text-cream/20 focus:outline-none focus:border-gold/40 transition-all"
+            dir="rtl"
+          />
+          {customField.helperText && (
+            <p className="font-arabic text-xs text-cream/30 leading-7">
+              {customField.helperText}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Quantity */}
       <QuantitySelector

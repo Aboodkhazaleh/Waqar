@@ -241,6 +241,11 @@ export default function OrdersClient({ initialOrders }: Props) {
                                     {item.closureName && <>إغلاق: {item.closureName}</>}
                                   </p>
                                 )}
+                                {item.customText && (
+                                  <p className="font-arabic text-[10px] text-[#3DB4C4] mt-0.5">
+                                    ✍️ نقش: {item.customText}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}

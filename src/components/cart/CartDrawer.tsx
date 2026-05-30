@@ -95,6 +95,7 @@ export default function CartDrawer({ whatsappNumber }: CartDrawerProps) {
             designName: i.designName,
             closureId: i.closureId,
             closureName: i.closureName,
+            customText: i.customText,
           })),
           totalPrice,
           currency,
@@ -122,9 +123,11 @@ export default function CartDrawer({ whatsappNumber }: CartDrawerProps) {
             const extras = [
               i.designName && `تصميم: ${i.designName}`,
               i.closureName && `إغلاق: ${i.closureName}`,
+              i.customText && `نقش: ${i.customText}`,
             ].filter(Boolean).join(" • ");
             const extrasPart = extras ? ` — ${extras}` : "";
-            return `${idx + 1}. ${i.productName} — ${i.colorName} — مقاس ${i.size}${extrasPart} — ${i.quantity} × ${formatPrice(i.price, i.currency)}`;
+            const sizePart = i.size && i.size !== "—" ? ` — مقاس ${i.size}` : "";
+            return `${idx + 1}. ${i.productName} — ${i.colorName}${sizePart}${extrasPart} — ${i.quantity} × ${formatPrice(i.price, i.currency)}`;
           }),
           "",
           `💰 الإجمالي: ${formatPrice(totalPrice, currency)}`,
@@ -327,6 +330,11 @@ function CartLine({ item, onRemove, onIncrement, onDecrement }: CartLineProps) {
                 {item.designName && <>تصميم: {item.designName}</>}
                 {item.designName && item.closureName && " • "}
                 {item.closureName && <>إغلاق: {item.closureName}</>}
+              </p>
+            )}
+            {item.customText && (
+              <p className="font-arabic text-[11px] text-accent truncate mt-0.5">
+                نقش: {item.customText}
               </p>
             )}
           </div>

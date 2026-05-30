@@ -11,7 +11,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import type { DesignOption, ClosureOption } from "@/types";
+import type { DesignOption, ClosureOption, ColorVariant } from "@/types";
 import ImageUploader from "./ImageUploader";
 
 /**
@@ -40,6 +40,12 @@ interface ProductOptionListProps {
   options: ProductOption[] | undefined;
   /** Called whenever the list changes */
   onChange: (next: ProductOption[]) => void;
+  /**
+   * Product's color list — used to render the "متاح للألوان" multi-select
+   * inside each option. When the customer picks a color, only options whose
+   * allowedColorIds contains it (or is empty) appear on the storefront.
+   */
+  productColors: ColorVariant[];
 }
 
 export default function ProductOptionList({
@@ -51,6 +57,7 @@ export default function ProductOptionList({
   currency,
   options,
   onChange,
+  productColors,
 }: ProductOptionListProps) {
   const list = options ?? [];
   const [openIdx, setOpenIdx] = useState<number | null>(0);
@@ -234,6 +241,17 @@ export default function ProductOptionList({
                     hint='مثال: "5" يضيف 5 د.أ على السعر الأساسي، "-2" يخصم 2.'
                   />
 
+                  {/* Color-scope: when non-empty, this option appears only if the customer picks one of these colors */}
+                  <ColorScopePicker
+                    productColors={productColors}
+                    allowedColorIds={opt.allowedColorIds ?? []}
+                    onChange={(ids) =>
+                      updateAt(idx, {
+                        allowedColorIds: ids.length === 0 ? undefined : ids,
+                      })
+                    }
+                  />
+
                   <div className="flex flex-col gap-2">
                     <label className="font-arabic text-xs text-white/50">
                       صور هذا الخيار (اختياري — إذا فُرغ، تظهر صور اللون الاعتيادية)
@@ -260,6 +278,86 @@ export default function ProductOptionList({
           </AnimatePresence>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============================================================
+// Color-scope picker — chooses which colors this option is valid for.
+// Empty = all colors. One or more = limited to those colors.
+// ============================================================
+interface ColorScopePickerProps {
+  productColors: ColorVariant[];
+  allowedColorIds: string[];
+  onChange: (next: string[]) => void;
+}
+function ColorScopePicker({
+  productColors,
+  allowedColorIds,
+  onChange,
+}: ColorScopePickerProps) {
+  if (productColors.length === 0) return null;
+  const allOn = allowedColorIds.length === 0;
+  const toggleColor = (id: string) => {
+    const has = allowedColorIds.includes(id);
+    if (has) onChange(allowedColorIds.filter((x) => x !== id));
+    else onChange([...allowedColorIds, id]);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <label className="font-arabic text-xs text-white/50">
+          متاح للألوان
+        </label>
+        {!allOn && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="font-arabic text-[11px] text-white/40 hover:text-white"
+          >
+            إعادة تعيين (الكل)
+          </button>
+        )}
+      </div>
+      <p className="font-arabic text-[11px] text-white/30 leading-6">
+        {allOn
+          ? "هذا الخيار يظهر للزبون مع كل الألوان (افتراضي)."
+          : `هذا الخيار يظهر فقط مع: ${productColors
+              .filter((c) => allowedColorIds.includes(c.id))
+              .map((c) => c.nameAr)
+              .join(" • ")}`}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {productColors.map((c) => {
+          const selected = allowedColorIds.includes(c.id);
+          const needsBorder = c.hex === "#FFFFFF" || c.hex === "#F8F8F8";
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => toggleColor(c.id)}
+              className={`flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg font-arabic text-xs transition-all border ${
+                selected || allOn
+                  ? "border-[#3DB4C4]/40 bg-[#3DB4C4]/10 text-white"
+                  : "border-[#2A2A2A] bg-[#1C1C1C] text-white/40 hover:text-white"
+              }`}
+              aria-pressed={selected}
+              title={selected ? "اضغط لإزالة هذا اللون" : "اضغط لتقييد بهذا اللون"}
+            >
+              <span
+                className="w-4 h-4 rounded-full flex-shrink-0"
+                style={{
+                  backgroundColor: c.hex,
+                  border: needsBorder ? "1px solid rgba(255,255,255,0.2)" : undefined,
+                }}
+              />
+              <span>{c.nameAr}</span>
+              {selected && <span className="text-[#3DB4C4]">✓</span>}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

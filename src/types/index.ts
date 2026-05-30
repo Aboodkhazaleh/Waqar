@@ -38,6 +38,18 @@ export interface Product {
   designs?: DesignOption[];
   closures?: ClosureOption[];
   sizeMatrix?: SizePair[];
+  /**
+   * Some products (e.g. مسابح / prayer beads) don't have sizes.
+   * When false, the size selector + size validation are skipped entirely.
+   * Default: true (backward-compatible).
+   */
+  requiresSize?: boolean;
+  /**
+   * When set, the storefront renders a single free-text input the customer
+   * fills (e.g. an engraving name on a rosary). Optional — only products
+   * that need this define it.
+   */
+  customField?: CustomFieldConfig;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +72,8 @@ export interface OrderItem {
   designName?: string;
   closureId?: string;
   closureName?: string;
+  /** Free-text the customer typed (e.g. engraving name on مسابح) */
+  customText?: string;
 }
 
 export interface Order {
@@ -146,6 +160,11 @@ export interface DesignOption {
   /** Optional dedicated image gallery. Empty = fall back to color images. */
   images?: string[];
   displayOrder?: number;
+  /**
+   * Restrict this option to specific colors (refers to ColorVariant.id).
+   * Empty / undefined = available for all colors.
+   */
+  allowedColorIds?: string[];
 }
 
 /**
@@ -160,6 +179,20 @@ export interface ClosureOption {
   priceAdjustment?: number;
   images?: string[];
   displayOrder?: number;
+  /** Same semantics as DesignOption.allowedColorIds. */
+  allowedColorIds?: string[];
+}
+
+/**
+ * Free-text input the customer fills (e.g. name to engrave on prayer beads).
+ * Set on the product itself when the admin wants a custom-text field.
+ */
+export interface CustomFieldConfig {
+  label: string;             // e.g. "الاسم للنقش"
+  placeholder?: string;      // e.g. "مثال: محمد"
+  required?: boolean;        // default false
+  maxLength?: number;        // default 50
+  helperText?: string;       // small hint shown below
 }
 
 /**

@@ -31,6 +31,8 @@ export interface CartItem {
   designName?: string;
   closureId?: string;
   closureName?: string;
+  /** Optional free-text (e.g. engraving name on مسابح) */
+  customText?: string;
 }
 
 interface CartState {
@@ -52,10 +54,18 @@ function makeKey(
   colorId: string,
   size: string,
   designId?: string,
-  closureId?: string
+  closureId?: string,
+  customText?: string
 ) {
-  // Variants with different designs/closures are separate cart lines
-  return [productId, colorId, size, designId ?? "", closureId ?? ""].join("__");
+  // Variants with different designs/closures/engravings are separate cart lines
+  return [
+    productId,
+    colorId,
+    size,
+    designId ?? "",
+    closureId ?? "",
+    customText ?? "",
+  ].join("__");
 }
 
 function reducer(state: CartState, action: CartAction): CartState {
@@ -68,7 +78,8 @@ function reducer(state: CartState, action: CartAction): CartState {
         action.item.colorId,
         action.item.size,
         action.item.designId,
-        action.item.closureId
+        action.item.closureId,
+        action.item.customText
       );
       const existing = state.items.find((i) => i.key === key);
       if (existing) {

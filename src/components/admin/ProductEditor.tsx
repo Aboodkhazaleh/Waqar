@@ -207,6 +207,7 @@ export default function ProductEditor({ product, onSave, onClose, onDelete }: Pr
               uploadSubfolder="designs"
               currency={draft.currency}
               options={draft.designs}
+              productColors={draft.colors}
               onChange={(next) => set("designs", next as DesignOption[])}
             />
           )}
@@ -219,6 +220,7 @@ export default function ProductEditor({ product, onSave, onClose, onDelete }: Pr
               uploadSubfolder="closures"
               currency={draft.currency}
               options={draft.closures}
+              productColors={draft.colors}
               onChange={(next) => set("closures", next as ClosureOption[])}
             />
           )}
@@ -677,6 +679,9 @@ function InventoryTab({ draft, set, toggleSize }: InventoryTabProps) {
         </p>
       </div>
 
+      {/* Order behavior — requiresSize + customField */}
+      <OrderBehaviorSection draft={draft} set={set} />
+
       {/* Stock summary */}
       <div className="bg-[#111111] border border-[#1C1C1C] rounded-xl p-4 flex items-center justify-between">
         <div>
@@ -691,6 +696,139 @@ function InventoryTab({ draft, set, toggleSize }: InventoryTabProps) {
             {formatPrice(totalStock * draft.price, draft.currency)}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// =================================================================
+// ----- Order behavior section: requiresSize + customField config -----
+// Lives inside Inventory tab. Universal — any product can opt in.
+// =================================================================
+interface OrderBehaviorProps {
+  draft: Product;
+  set: <K extends keyof Product>(key: K, value: Product[K]) => void;
+}
+function OrderBehaviorSection({ draft, set }: OrderBehaviorProps) {
+  const requiresSize = draft.requiresSize !== false; // default true
+  const cf = draft.customField;
+
+  return (
+    <div className="bg-[#111111] border border-[#1C1C1C] rounded-xl p-4 flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 bg-[#3DB4C4]/10 rounded-lg flex items-center justify-center">
+          <Tag size={14} className="text-[#3DB4C4]" />
+        </div>
+        <h3 className="font-arabic text-sm font-semibold text-white">سلوك الطلب</h3>
+      </div>
+
+      {/* Toggle: requires size */}
+      <button
+        type="button"
+        onClick={() => set("requiresSize", !requiresSize)}
+        className="w-full flex items-center justify-between py-2 px-2 hover:bg-[#1C1C1C]/50 rounded-lg transition-colors"
+      >
+        <div className="text-right">
+          <span className="font-arabic text-sm text-white/80 block">
+            يتطلب اختيار مقاس
+          </span>
+          <span className="font-arabic text-[11px] text-white/40 block mt-0.5">
+            عطّله للمنتجات مثل المسابح/الإكسسوارات التي لا تحتاج مقاس
+          </span>
+        </div>
+        <div
+          className={`relative w-10 h-5 rounded-full transition-all flex-shrink-0 ${
+            requiresSize ? "bg-[#3DB4C4]" : "bg-[#2A2A2A]"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
+              requiresSize ? "right-0.5" : "left-0.5"
+            }`}
+          />
+        </div>
+      </button>
+
+      {/* Custom field config */}
+      <div className="flex flex-col gap-3 border-t border-[#1C1C1C] pt-4">
+        <div className="flex items-center justify-between">
+          <span className="font-arabic text-sm text-white/80">
+            حقل نص مخصص (اختياري)
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (cf) {
+                set("customField", undefined);
+              } else {
+                set("customField", {
+                  label: "الاسم للنقش",
+                  placeholder: "مثال: محمد",
+                  required: false,
+                  maxLength: 50,
+                });
+              }
+            }}
+            className={`relative w-10 h-5 rounded-full transition-all flex-shrink-0 ${
+              cf ? "bg-[#3DB4C4]" : "bg-[#2A2A2A]"
+            }`}
+            aria-pressed={!!cf}
+          >
+            <span
+              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
+                cf ? "right-0.5" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        <p className="font-arabic text-[11px] text-white/40 leading-7">
+          فعّله ليظهر للزبون مربع نص يكتب فيه (مثال: اسم النقش على المسبحة).
+        </p>
+        {cf && (
+          <div className="flex flex-col gap-3 bg-[#0A0A0A] border border-[#1C1C1C] rounded-lg p-3">
+            <Input
+              label="عنوان الحقل (يظهر للزبون)"
+              value={cf.label}
+              onChange={(v) => set("customField", { ...cf, label: v })}
+            />
+            <Input
+              label="Placeholder (نص توضيحي داخل المربع)"
+              value={cf.placeholder ?? ""}
+              onChange={(v) => set("customField", { ...cf, placeholder: v })}
+            />
+            <Input
+              label="نص مساعد (يظهر تحت المربع)"
+              value={cf.helperText ?? ""}
+              onChange={(v) => set("customField", { ...cf, helperText: v })}
+              hint="مثال: الحد الأقصى 5 أحرف للنقش الواضح"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="الحد الأقصى للأحرف"
+                type="number"
+                value={String(cf.maxLength ?? 50)}
+                onChange={(v) =>
+                  set("customField", { ...cf, maxLength: Number(v) || 50 })
+                }
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  set("customField", { ...cf, required: !cf.required })
+                }
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border transition-all ${
+                  cf.required
+                    ? "bg-[#3DB4C4]/15 border-[#3DB4C4]/30 text-[#3DB4C4]"
+                    : "bg-[#1C1C1C] border-[#2A2A2A] text-white/50"
+                }`}
+              >
+                <span className="font-arabic text-xs">
+                  {cf.required ? "✓ مطلوب" : "اختياري"}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
