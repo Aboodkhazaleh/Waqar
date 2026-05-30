@@ -10,6 +10,7 @@ import Button from "@/components/ui/Button";
 import { formatPrice, getDiscountPercentage, buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/utils";
 import { ShoppingBag, Shield, Truck, RefreshCw, Star, ChevronDown } from "lucide-react";
 import { subscribeSizes } from "@/lib/firestore";
+import { formatSizeWithPair } from "@/lib/sizeMapping";
 
 interface ProductInfoProps {
   product: Product;
@@ -50,10 +51,13 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
       setError("الرجاء اختيار المقاس أولاً");
       return;
     }
+    // If the size has a paired letter↔number value, send both ("M / 56")
+    // so the order record + WhatsApp message capture the complete selection.
+    const sizeForOrder = formatSizeWithPair(selectedSize);
     const msg = buildWhatsAppMessage({
       productName: product.nameAr,
       colorName: selectedColor?.nameAr ?? "",
-      size: selectedSize,
+      size: sizeForOrder,
       quantity,
       price: product.price,
       currency: product.currency,

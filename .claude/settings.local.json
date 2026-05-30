@@ -41,7 +41,8 @@
       "Bash(git push *)",
       "Bash(git commit -m 'Connect Firebase Firestore with real config *)",
       "Bash(git commit -m 'Fix Next.js Image 400 errors for Firebase Storage URLs *)",
-      "Bash(git commit -m 'Add admin-managed size system \\(56, 58, 60, 62 + full CRUD\\) *)"
+      "Bash(git commit -m 'Add admin-managed size system \\(56, 58, 60, 62 + full CRUD\\) *)",
+      "Bash(git commit -m 'Two-row size selector with letter↔number pairing *)"
     ]
   }
 }
