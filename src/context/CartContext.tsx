@@ -13,7 +13,7 @@ import {
 // Cart item shape — one line item in the cart
 // =====================================================================
 export interface CartItem {
-  /** Unique line key (productId + colorId + size combination) */
+  /** Unique line key (productId + colorId + size + design + closure combination) */
   key: string;
   productId: string;
   productSlug: string;
@@ -26,6 +26,11 @@ export interface CartItem {
   price: number;
   currency: string;
   image: string;
+  // Optional — only present for products that expose these (e.g. Al-Raqi)
+  designId?: string;
+  designName?: string;
+  closureId?: string;
+  closureName?: string;
 }
 
 interface CartState {
@@ -42,8 +47,15 @@ type CartAction =
 
 const STORAGE_KEY = "waqar_cart_v1";
 
-function makeKey(productId: string, colorId: string, size: string) {
-  return `${productId}__${colorId}__${size}`;
+function makeKey(
+  productId: string,
+  colorId: string,
+  size: string,
+  designId?: string,
+  closureId?: string
+) {
+  // Variants with different designs/closures are separate cart lines
+  return [productId, colorId, size, designId ?? "", closureId ?? ""].join("__");
 }
 
 function reducer(state: CartState, action: CartAction): CartState {
@@ -51,7 +63,13 @@ function reducer(state: CartState, action: CartAction): CartState {
     case "HYDRATE":
       return { items: action.items, hydrated: true };
     case "ADD": {
-      const key = makeKey(action.item.productId, action.item.colorId, action.item.size);
+      const key = makeKey(
+        action.item.productId,
+        action.item.colorId,
+        action.item.size,
+        action.item.designId,
+        action.item.closureId
+      );
       const existing = state.items.find((i) => i.key === key);
       if (existing) {
         return {

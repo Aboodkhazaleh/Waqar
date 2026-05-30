@@ -33,6 +33,11 @@ export interface Product {
   isFeatured: boolean;
   displayOrder?: number;
   badges?: string[]; // e.g. ["جديد", "تخفيض", "محدود"]
+  // Per-product extensions — all optional. Only Al-Raqi populates these today.
+  // Other products keep their existing behavior unchanged when these are absent.
+  designs?: DesignOption[];
+  closures?: ClosureOption[];
+  sizeMatrix?: SizePair[];
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +55,11 @@ export interface OrderItem {
   price: number;
   currency: string;
   image?: string;
+  // Optional — only present when the product has these extras (e.g. Al-Raqi)
+  designId?: string;
+  designName?: string;
+  closureId?: string;
+  closureName?: string;
 }
 
 export interface Order {
@@ -120,4 +130,45 @@ export interface Size {
   displayOrder: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Per-product design variant (e.g. "الراقي", "مونس" on the Al-Raqi product).
+ * Optional — products without designs render as before.
+ */
+export interface DesignOption {
+  id: string;
+  nameAr: string;
+  nameEn?: string;
+  isActive: boolean;
+  /** Δ added to the base product price when this design is selected (can be negative) */
+  priceAdjustment?: number;
+  /** Optional dedicated image gallery. Empty = fall back to color images. */
+  images?: string[];
+  displayOrder?: number;
+}
+
+/**
+ * Per-product closure variant (e.g. "أزرار", "سحاب مخفي" on Al-Raqi).
+ * Optional — products without closures render as before.
+ */
+export interface ClosureOption {
+  id: string;
+  nameAr: string;
+  nameEn?: string;
+  isActive: boolean;
+  priceAdjustment?: number;
+  images?: string[];
+  displayOrder?: number;
+}
+
+/**
+ * One available letter+number size combination. Lets the admin allow
+ * (S, 56) and (S, 60) while disabling (S, 58).
+ * Optional — if `sizeMatrix` is absent, the existing independent rows behavior is used.
+ */
+export interface SizePair {
+  letterSize: string;    // e.g. "S", "M"
+  numberSize: string;    // e.g. "56", "58"
+  inStock: boolean;
 }

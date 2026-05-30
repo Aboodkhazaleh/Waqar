@@ -19,9 +19,21 @@ interface Props {
 
 export default function ProductPageClient({ product }: Props) {
   const [selectedColorId, setSelectedColorId] = useState(product.colors[0]?.id ?? "");
+  const [selectedDesignId, setSelectedDesignId] = useState("");
+  const [selectedClosureId, setSelectedClosureId] = useState("");
 
   const selectedColor = product.colors.find((c) => c.id === selectedColorId);
-  const currentImages = selectedColor?.images ?? product.colors[0]?.images ?? [];
+  const selectedDesign = product.designs?.find((d) => d.id === selectedDesignId);
+  const selectedClosure = product.closures?.find((c) => c.id === selectedClosureId);
+
+  // Image priority: design gallery > closure gallery > color images.
+  // Design takes priority because it's the bigger visual change.
+  const currentImages =
+    (selectedDesign?.images && selectedDesign.images.length > 0
+      ? selectedDesign.images
+      : selectedClosure?.images && selectedClosure.images.length > 0
+      ? selectedClosure.images
+      : selectedColor?.images) ?? product.colors[0]?.images ?? [];
 
   return (
     <main className="min-h-screen bg-dark">
@@ -59,6 +71,8 @@ export default function ProductPageClient({ product }: Props) {
                 product={product}
                 selectedColorId={selectedColorId}
                 onColorChange={setSelectedColorId}
+                onDesignChange={setSelectedDesignId}
+                onClosureChange={setSelectedClosureId}
               />
             </motion.div>
           </div>

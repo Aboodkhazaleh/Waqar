@@ -234,6 +234,13 @@ export default function OrdersClient({ initialOrders }: Props) {
                                 <p className="font-arabic text-[11px] text-white/40">
                                   {item.colorName} • مقاس {item.size}
                                 </p>
+                                {(item.designName || item.closureName) && (
+                                  <p className="font-arabic text-[10px] text-[#3DB4C4]/70 mt-0.5">
+                                    {item.designName && <>تصميم: {item.designName}</>}
+                                    {item.designName && item.closureName && " • "}
+                                    {item.closureName && <>إغلاق: {item.closureName}</>}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}

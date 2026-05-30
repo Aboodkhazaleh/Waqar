@@ -91,6 +91,10 @@ export default function CartDrawer({ whatsappNumber }: CartDrawerProps) {
             price: i.price,
             currency: i.currency,
             image: i.image,
+            designId: i.designId,
+            designName: i.designName,
+            closureId: i.closureId,
+            closureName: i.closureName,
           })),
           totalPrice,
           currency,
@@ -114,10 +118,14 @@ export default function CartDrawer({ whatsappNumber }: CartDrawerProps) {
           `📞 الهاتف: ${customerPhone.trim()}`,
           "",
           "🛍️ تفاصيل الطلب:",
-          ...items.map(
-            (i, idx) =>
-              `${idx + 1}. ${i.productName} — ${i.colorName} — مقاس ${i.size} — ${i.quantity} × ${formatPrice(i.price, i.currency)}`
-          ),
+          ...items.map((i, idx) => {
+            const extras = [
+              i.designName && `تصميم: ${i.designName}`,
+              i.closureName && `إغلاق: ${i.closureName}`,
+            ].filter(Boolean).join(" • ");
+            const extrasPart = extras ? ` — ${extras}` : "";
+            return `${idx + 1}. ${i.productName} — ${i.colorName} — مقاس ${i.size}${extrasPart} — ${i.quantity} × ${formatPrice(i.price, i.currency)}`;
+          }),
           "",
           `💰 الإجمالي: ${formatPrice(totalPrice, currency)}`,
         ];
@@ -314,6 +322,13 @@ function CartLine({ item, onRemove, onIncrement, onDecrement }: CartLineProps) {
                 {item.colorName} • مقاس {item.size}
               </p>
             </div>
+            {(item.designName || item.closureName) && (
+              <p className="font-arabic text-[11px] text-white/40 truncate mt-0.5">
+                {item.designName && <>تصميم: {item.designName}</>}
+                {item.designName && item.closureName && " • "}
+                {item.closureName && <>إغلاق: {item.closureName}</>}
+              </p>
+            )}
           </div>
           <button
             onClick={onRemove}

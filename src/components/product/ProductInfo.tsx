@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Product, Size } from "@/types";
 import ColorSelector from "./ColorSelector";
 import SizeSelector, { type SizeRowKey } from "./SizeSelector";
+import OptionPicker from "./OptionPicker";
 import QuantitySelector from "./QuantitySelector";
 import Button from "@/components/ui/Button";
 import { formatPrice, getDiscountPercentage, buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/utils";
@@ -16,19 +17,49 @@ interface ProductInfoProps {
   product: Product;
   onColorChange: (colorId: string) => void;
   selectedColorId: string;
+  /** Optional — when set, parent gets notified so it can swap the gallery */
+  onDesignChange?: (designId: string) => void;
+  onClosureChange?: (closureId: string) => void;
 }
 
-export default function ProductInfo({ product, onColorChange, selectedColorId }: ProductInfoProps) {
+export default function ProductInfo({
+  product,
+  onColorChange,
+  selectedColorId,
+  onDesignChange,
+  onClosureChange,
+}: ProductInfoProps) {
   // Independent selection per row — customer can pick a letter AND a number simultaneously
   const [sizeSelection, setSizeSelection] = useState({
     letter: "",
     number: "",
     other: "",
   });
+  const [selectedDesignId, setSelectedDesignId] = useState("");
+  const [selectedClosureId, setSelectedClosureId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
   const [allSizes, setAllSizes] = useState<Size[]>([]);
+
+  // Look up selected design / closure objects (live derived from current selection)
+  const selectedDesign = useMemo(
+    () => product.designs?.find((d) => d.id === selectedDesignId && d.isActive),
+    [product.designs, selectedDesignId]
+  );
+  const selectedClosure = useMemo(
+    () => product.closures?.find((c) => c.id === selectedClosureId && c.isActive),
+    [product.closures, selectedClosureId]
+  );
+
+  // Effective price = base + design adjustment + closure adjustment
+  const effectivePrice = useMemo(
+    () =>
+      product.price +
+      (selectedDesign?.priceAdjustment ?? 0) +
+      (selectedClosure?.priceAdjustment ?? 0),
+    [product.price, selectedDesign, selectedClosure]
+  );
 
   // Real-time subscribe to sizes — so disabling a size in admin hides it instantly
   useEffect(() => {
@@ -66,12 +97,24 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
       setError("الرجاء اختيار المقاس أولاً");
       return;
     }
+    // Include optional design/closure in the WhatsApp message so the shop
+    // sees the exact variant when the customer goes direct.
+    const variantSuffix = [
+      selectedDesign && `تصميم: ${selectedDesign.nameAr}`,
+      selectedClosure && `إغلاق: ${selectedClosure.nameAr}`,
+    ]
+      .filter(Boolean)
+      .join(" • ");
+    const productLabel = variantSuffix
+      ? `${product.nameAr} (${variantSuffix})`
+      : product.nameAr;
+
     const msg = buildWhatsAppMessage({
-      productName: product.nameAr,
+      productName: productLabel,
       colorName: selectedColor?.nameAr ?? "",
       size: combinedSize,
       quantity,
-      price: product.price,
+      price: effectivePrice,
       currency: product.currency,
     });
     window.open(buildWhatsAppUrl(whatsappNumber, msg), "_blank");
@@ -101,9 +144,17 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
       colorHex: selectedColor.hex,
       size: combinedSize,
       quantity,
-      price: product.price,
+      price: effectivePrice,
       currency: product.currency,
-      image: selectedColor.images?.[0] ?? "",
+      image:
+        selectedDesign?.images?.[0] ??
+        selectedClosure?.images?.[0] ??
+        selectedColor.images?.[0] ??
+        "",
+      designId: selectedDesign?.id,
+      designName: selectedDesign?.nameAr,
+      closureId: selectedClosure?.id,
+      closureName: selectedClosure?.nameAr,
     });
   };
 
@@ -135,17 +186,22 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
       {/* Price */}
       <div className="flex items-baseline gap-4">
         <span className="font-arabic text-4xl font-bold text-gold">
-          {formatPrice(product.price, product.currency)}
+          {formatPrice(effectivePrice, product.currency)}
         </span>
-        {product.originalPrice && (
+        {product.originalPrice && product.originalPrice > effectivePrice && (
           <>
             <span className="font-arabic text-xl text-cream/30 line-through">
               {formatPrice(product.originalPrice, product.currency)}
             </span>
             <span className="bg-gold/15 text-gold font-arabic text-xs font-bold px-2 py-1 rounded-full">
-              وفّر {getDiscountPercentage(product.price, product.originalPrice)}%
+              وفّر {getDiscountPercentage(effectivePrice, product.originalPrice)}%
             </span>
           </>
+        )}
+        {effectivePrice !== product.price && (
+          <span className="font-arabic text-xs text-cream/40">
+            (السعر الأساسي {formatPrice(product.price, product.currency)})
+          </span>
         )}
       </div>
 
@@ -162,11 +218,40 @@ export default function ProductInfo({ product, onColorChange, selectedColorId }:
         onSelect={onColorChange}
       />
 
-      {/* Size — letter row + number row are independent */}
+      {/* Design — only when the product defines it (e.g. الراقي) */}
+      {product.designs && product.designs.some((d) => d.isActive) && (
+        <OptionPicker
+          label="التصميم"
+          options={product.designs}
+          selectedId={selectedDesignId}
+          currency={product.currency}
+          onSelect={(id) => {
+            setSelectedDesignId(id);
+            onDesignChange?.(id);
+          }}
+        />
+      )}
+
+      {/* Closure — only when the product defines it (e.g. الراقي) */}
+      {product.closures && product.closures.some((c) => c.isActive) && (
+        <OptionPicker
+          label="نوع الإغلاق"
+          options={product.closures}
+          selectedId={selectedClosureId}
+          currency={product.currency}
+          onSelect={(id) => {
+            setSelectedClosureId(id);
+            onClosureChange?.(id);
+          }}
+        />
+      )}
+
+      {/* Size — letter row + number row are independent (or matrix-gated for al-raqi) */}
       <SizeSelector
         sizes={visibleSizes}
         selection={sizeSelection}
         onChange={handleSizeChange}
+        sizeMatrix={product.sizeMatrix}
       />
 
       {/* Quantity */}

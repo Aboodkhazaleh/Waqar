@@ -4,14 +4,22 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Save, Trash2, Plus, Globe, Palette, Package, Tag,
-  Layers, AlertCircle, Check, Languages, ChevronDown,
+  Layers, AlertCircle, Check, Languages, ChevronDown, Shirt, Lock, Grid3x3,
 } from "lucide-react";
-import type { Product, ColorVariant, Size } from "@/types";
+import type {
+  Product, ColorVariant, Size, DesignOption, ClosureOption, SizePair,
+} from "@/types";
 import { AVAILABLE_BADGES } from "@/types";
 import ImageUploader from "./ImageUploader";
 import { formatPrice } from "@/lib/utils";
 import { categories } from "@/data/categories";
 import { subscribeSizes } from "@/lib/firestore";
+import ProductOptionList, { type ProductOption } from "./ProductOptionList";
+import SizeMatrixEditor from "./SizeMatrixEditor";
+
+// Per-product extensions are scoped to specific products by slug.
+// If you want to enable these tabs for another product later, add its slug here.
+const SLUGS_WITH_EXTENSIONS = new Set(["al-raqi"]);
 
 interface ProductEditorProps {
   product: Product;
@@ -20,13 +28,27 @@ interface ProductEditorProps {
   onDelete?: (id: string) => Promise<void>;
 }
 
-type Tab = "basic" | "colors" | "inventory" | "meta";
+type Tab =
+  | "basic"
+  | "colors"
+  | "inventory"
+  | "meta"
+  | "designs"
+  | "closures"
+  | "matrix";
 
-const TABS: { id: Tab; labelAr: string; icon: typeof Globe }[] = [
+const BASE_TABS: { id: Tab; labelAr: string; icon: typeof Globe }[] = [
   { id: "basic", labelAr: "أساسي", icon: Globe },
   { id: "colors", labelAr: "الألوان والصور", icon: Palette },
   { id: "inventory", labelAr: "المخزون والمقاسات", icon: Package },
   { id: "meta", labelAr: "الشارات والترتيب", icon: Tag },
+];
+
+// Extra tabs for products that have design/closure/matrix options
+const EXTENSION_TABS: { id: Tab; labelAr: string; icon: typeof Globe }[] = [
+  { id: "designs", labelAr: "التصاميم", icon: Shirt },
+  { id: "closures", labelAr: "نوع الإغلاق", icon: Lock },
+  { id: "matrix", labelAr: "توفّر المقاسات", icon: Grid3x3 },
 ];
 
 export default function ProductEditor({ product, onSave, onClose, onDelete }: ProductEditorProps) {
@@ -131,9 +153,12 @@ export default function ProductEditor({ product, onSave, onClose, onDelete }: Pr
           </button>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs — extension tabs appear only for products in SLUGS_WITH_EXTENSIONS */}
         <div className="flex border-b border-[#1C1C1C] px-2 flex-shrink-0 overflow-x-auto scrollbar-hide">
-          {TABS.map((tab) => {
+          {(SLUGS_WITH_EXTENSIONS.has(draft.slug)
+            ? [...BASE_TABS, ...EXTENSION_TABS]
+            : BASE_TABS
+          ).map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -172,6 +197,37 @@ export default function ProductEditor({ product, onSave, onClose, onDelete }: Pr
           )}
           {activeTab === "meta" && (
             <MetaTab draft={draft} set={set} toggleBadge={toggleBadge} />
+          )}
+          {activeTab === "designs" && (
+            <ProductOptionList
+              title="التصاميم"
+              pluralName="تصاميم"
+              singularName="تصميم"
+              productSlug={draft.slug}
+              uploadSubfolder="designs"
+              currency={draft.currency}
+              options={draft.designs}
+              onChange={(next) => set("designs", next as DesignOption[])}
+            />
+          )}
+          {activeTab === "closures" && (
+            <ProductOptionList
+              title="نوع الإغلاق"
+              pluralName="أنواع"
+              singularName="نوع إغلاق"
+              productSlug={draft.slug}
+              uploadSubfolder="closures"
+              currency={draft.currency}
+              options={draft.closures}
+              onChange={(next) => set("closures", next as ClosureOption[])}
+            />
+          )}
+          {activeTab === "matrix" && (
+            <SizeMatrixEditor
+              sizes={draft.sizes}
+              matrix={draft.sizeMatrix}
+              onChange={(next) => set("sizeMatrix", next)}
+            />
           )}
         </div>
 
