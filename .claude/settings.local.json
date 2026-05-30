@@ -44,7 +44,9 @@
       "Bash(git commit -m 'Add admin-managed size system \\(56, 58, 60, 62 + full CRUD\\) *)",
       "Bash(git commit -m 'Two-row size selector with letter↔number pairing *)",
       "Bash(git commit -m 'Unlink letter/number size rows — independent selection *)",
-      "Bash(git commit -m 'Independent per-row size selection \\(letter + number simultaneously\\) *)"
+      "Bash(git commit -m 'Independent per-row size selection \\(letter + number simultaneously\\) *)",
+      "Bash(git commit -m 'Cart system + footer cleanup + product reorder *)",
+      "Bash(git commit -m 'Add data-protection safeguards for Firestore *)"
     ]
   }
 }

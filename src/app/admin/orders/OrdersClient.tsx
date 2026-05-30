@@ -6,6 +6,7 @@ import type { Order } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { Search, Trash2, AlertTriangle, X, Check } from "lucide-react";
 import { subscribeOrders } from "@/lib/firestore";
+import TypedConfirmModal from "@/components/admin/TypedConfirmModal";
 
 interface Props {
   initialOrders: Order[];
@@ -309,16 +310,16 @@ export default function OrdersClient({ initialOrders }: Props) {
         </div>
       </div>
 
-      {/* Confirm Delete All Modal */}
-      <ConfirmModal
+      {/* Confirm Delete All Modal — requires typing "DELETE" */}
+      <TypedConfirmModal
         open={confirmDeleteAll}
         onClose={() => setConfirmDeleteAll(false)}
         onConfirm={handleDeleteAll}
         busy={busy}
-        title="حذف جميع الطلبات؟"
-        message={`سيتم حذف ${orders.length} ${orders.length === 1 ? "طلب" : "طلبات"} نهائياً. لا يمكن التراجع عن هذا الإجراء.`}
-        confirmLabel="نعم، احذف الكل"
-        variant="danger"
+        title={`حذف جميع الطلبات (${orders.length})؟`}
+        message="عملية لا يمكن التراجع عنها. سيتم حذف جميع الطلبات نهائياً من Firestore."
+        confirmWord="DELETE"
+        confirmLabel="حذف نهائي"
       />
 
       {/* Confirm Delete Single Modal */}

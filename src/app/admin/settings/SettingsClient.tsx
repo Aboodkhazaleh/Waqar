@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { SiteSettings } from "@/types";
-import { Save, MessageCircle, Globe, Image, Database, AlertCircle } from "lucide-react";
+import { Save, MessageCircle, Globe, Image } from "lucide-react";
 import { subscribeSettings } from "@/lib/firestore";
 
 interface Props {
@@ -13,30 +13,7 @@ export default function SettingsClient({ initialSettings }: Props) {
   const [settings, setSettings] = useState<SiteSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
-  const [seeding, setSeeding] = useState(false);
-  const [seedMsg, setSeedMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const isLocalEdit = useRef(false);
-
-  const handleSeed = async () => {
-    if (!confirm("سيتم نسخ المنتجات الافتراضية إلى Firestore (لن يحذف أي شيء موجود). المتابعة؟")) return;
-    setSeeding(true);
-    setSeedMsg(null);
-    try {
-      const res = await fetch("/api/admin/seed", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setSeedMsg({
-          type: "ok",
-          text: `تم: ${data.seededProducts} منتج، ${data.seededSettings ? "تم إنشاء الإعدادات" : "الإعدادات موجودة مسبقاً"}`,
-        });
-      } else {
-        setSeedMsg({ type: "err", text: data.error ?? "فشل" });
-      }
-      setTimeout(() => setSeedMsg(null), 5000);
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   // Subscribe to Firestore but ignore the update we just sent ourselves
   useEffect(() => {
@@ -167,41 +144,6 @@ export default function SettingsClient({ initialSettings }: Props) {
         حفظ الإعدادات
       </button>
 
-      {/* Firestore setup */}
-      <div className="bg-[#111111] border border-[#1C1C1C] rounded-2xl p-5 flex flex-col gap-4 mt-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Database size={16} className="text-[#3DB4C4]" />
-          <h3 className="font-arabic text-sm font-semibold text-white">إعداد Firestore</h3>
-        </div>
-        <p className="font-arabic text-xs text-white/50 leading-7">
-          عند تشغيل المشروع لأول مرة على Firebase، اضغط الزر التالي لنسخ المنتجات الافتراضية
-          (السمو، الراقي، الاكسسوارات) إلى Firestore. لا يحذف هذا الزر شيئاً — فقط يضيف ما لم يكن موجوداً.
-        </p>
-        <button
-          onClick={handleSeed}
-          disabled={seeding}
-          className="flex items-center justify-center gap-2 py-3 bg-[#1C1C1C] border border-[#2A2A2A] text-white/80 hover:text-white hover:border-[#3DB4C4]/40 font-arabic font-semibold text-sm rounded-xl transition-all disabled:opacity-60"
-        >
-          {seeding ? (
-            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Database size={14} />
-          )}
-          تهيئة Firestore بالمنتجات الافتراضية
-        </button>
-        {seedMsg && (
-          <div
-            className={`flex items-center gap-2 rounded-lg p-2.5 ${
-              seedMsg.type === "ok"
-                ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                : "bg-red-500/10 border border-red-500/20 text-red-400"
-            }`}
-          >
-            <AlertCircle size={14} />
-            <p className="font-arabic text-xs">{seedMsg.text}</p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

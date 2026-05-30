@@ -10,6 +10,7 @@ import {
   Search, Plus, ImageOff,
 } from "lucide-react";
 import ProductEditor from "@/components/admin/ProductEditor";
+import TypedConfirmModal from "@/components/admin/TypedConfirmModal";
 import { categories } from "@/data/categories";
 import { subscribeProducts } from "@/lib/firestore";
 
@@ -25,6 +26,8 @@ export default function ProductsClient({ initialProducts }: Props) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [msg, setMsg] = useState("");
+  const [productPendingDelete, setProductPendingDelete] = useState<Product | null>(null);
+  const [deletingBusy, setDeletingBusy] = useState(false);
 
   // Real-time Firestore subscription
   useEffect(() => {
@@ -98,19 +101,34 @@ export default function ProductsClient({ initialProducts }: Props) {
     }
   };
 
+  // Step 1: When the editor asks to delete, open the typed-confirm modal first.
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذا المنتج نهائياً؟")) return;
-    const res = await fetch("/api/admin/products", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    if (res.ok) {
-      setProducts(products.filter((p) => p.id !== id));
-      setEditing(null);
-      showMsg("تم حذف المنتج");
-    } else {
-      showMsg("فشل الحذف");
+    const target = products.find((p) => p.id === id) ?? null;
+    if (target) setProductPendingDelete(target);
+  };
+
+  // Step 2: Called from the TypedConfirmModal — only fires after the admin
+  // typed the product's nameAr exactly. This is the only path that actually
+  // removes the doc from Firestore.
+  const handleConfirmedDelete = async () => {
+    if (!productPendingDelete) return;
+    setDeletingBusy(true);
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: productPendingDelete.id }),
+      });
+      if (res.ok) {
+        setProducts(products.filter((p) => p.id !== productPendingDelete.id));
+        setEditing(null);
+        showMsg(`تم حذف المنتج "${productPendingDelete.nameAr}"`);
+        setProductPendingDelete(null);
+      } else {
+        showMsg("فشل الحذف");
+      }
+    } finally {
+      setDeletingBusy(false);
     }
   };
 
@@ -465,6 +483,18 @@ export default function ProductsClient({ initialProducts }: Props) {
           />
         )}
       </AnimatePresence>
+
+      {/* Typed delete confirmation — admin must type the product's Arabic name */}
+      <TypedConfirmModal
+        open={productPendingDelete !== null}
+        onClose={() => !deletingBusy && setProductPendingDelete(null)}
+        onConfirm={handleConfirmedDelete}
+        busy={deletingBusy}
+        title={`حذف "${productPendingDelete?.nameAr ?? ""}" نهائياً؟`}
+        message="سيتم حذف المنتج وكل ألوانه/مقاساته/صوره من Firestore. لا يمكن التراجع. تأكد قبل المتابعة."
+        confirmWord={productPendingDelete?.nameAr ?? "DELETE"}
+        confirmLabel="حذف المنتج"
+      />
     </div>
   );
 }
