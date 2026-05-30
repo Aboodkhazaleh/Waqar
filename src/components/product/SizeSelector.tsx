@@ -2,11 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useMemo } from "react";
-import {
-  getMappedSize,
-  splitSizesIntoRows,
-  formatSizeWithPair,
-} from "@/lib/sizeMapping";
+import { splitSizesIntoRows } from "@/lib/sizeMapping";
 
 interface SizeSelectorProps {
   sizes: string[];
@@ -19,16 +15,14 @@ export default function SizeSelector({
   selectedSize,
   onSelect,
 }: SizeSelectorProps) {
+  // Two-row visual layout (letters + numbers), but each button is independent.
+  // Selecting a letter does NOT auto-select its number counterpart.
   const { letterRow, numberRow, others } = useMemo(
     () => splitSizesIntoRows(sizes),
     [sizes]
   );
 
-  // The mapped pair of the user's selection — both should appear highlighted
-  const pairedSize = selectedSize ? getMappedSize(selectedSize) : null;
-
-  const isHighlighted = (size: string) =>
-    size === selectedSize || size === pairedSize;
+  const isHighlighted = (size: string) => size === selectedSize;
 
   return (
     <div className="flex flex-col gap-3">
@@ -37,12 +31,12 @@ export default function SizeSelector({
         <span className="font-arabic text-sm text-cream/60">المقاس</span>
         {selectedSize && (
           <span className="font-arabic text-sm text-cream font-medium">
-            مقاس {formatSizeWithPair(selectedSize)}
+            مقاس {selectedSize}
           </span>
         )}
       </div>
 
-      {/* Row 1 — Letter sizes (S, M, L, XL, XXL, ...) */}
+      {/* Row 1 — Letter sizes (XS, S, M, L, XL, XXL, XXXL ...) */}
       {letterRow.length > 0 && (
         <SizeRow
           sizes={letterRow}
@@ -51,7 +45,7 @@ export default function SizeSelector({
         />
       )}
 
-      {/* Row 2 — Number sizes (54, 56, 58, 60, 62, ...) */}
+      {/* Row 2 — Number sizes (52, 54, 56, 58, 60, 62, 64 ...) */}
       {numberRow.length > 0 && (
         <SizeRow
           sizes={numberRow}
@@ -60,7 +54,7 @@ export default function SizeSelector({
         />
       )}
 
-      {/* Other sizes (e.g. One Size) — separate row if any */}
+      {/* Other sizes (e.g. One Size) */}
       {others.length > 0 && (
         <SizeRow
           sizes={others}
