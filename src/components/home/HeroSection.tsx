@@ -70,7 +70,7 @@ export default function HeroSection() {
           transition={{ duration: 0.8, delay: 0.7 }}
           className="font-arabic text-white/80 text-lg md:text-xl mb-3 leading-relaxed max-w-2xl mx-auto"
         >
-          فاشن أردني فاخر، حيث يلتقي التصميم الحديث بالحرفية الراقية
+          أناقة الرجل تبدأ من الوقار
         </motion.p>
 
         {/* English subtitle */}
