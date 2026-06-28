@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { seedDefaultsIfEmpty, isFirebaseConfigured } from "@/lib/firestore";
+import { seedDefaultsServer, isAdminConfigured } from "@/lib/firestoreServer";
 
 /**
  * ⚠️ DESTRUCTIVE: writes default products into Firestore.
@@ -26,17 +26,17 @@ export async function POST() {
 
   const authed = await isAdminAuthenticated();
   if (!authed) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  if (!isFirebaseConfigured) {
+  if (!isAdminConfigured()) {
     return NextResponse.json(
       {
         error:
-          "Firestore غير مهيأ. تأكد من ضبط متغيرات NEXT_PUBLIC_FIREBASE_* في .env.local.",
+          "Firebase Admin SDK غير مهيأ. أضف بيانات service account في .env.local.",
       },
       { status: 500 }
     );
   }
   try {
-    const result = await seedDefaultsIfEmpty();
+    const result = await seedDefaultsServer();
     return NextResponse.json({ success: true, ...result });
   } catch (err) {
     return NextResponse.json(

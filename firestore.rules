@@ -1,28 +1,74 @@
-// Firestore Security Rules for Waqar
-// Copy this into Firebase Console → Firestore → Rules → Publish
+// =============================================================
+// Waqar — Production Firestore Security Rules
+// =============================================================
 //
-// For now: permissive (works out of the box for dev + single-admin setups).
-// For production with multiple users, replace `if true` with auth checks.
+// Threat model:
+//   * Anyone on the public internet can hit Firestore directly with the
+//     web SDK using our NEXT_PUBLIC_FIREBASE_* config (those values are
+//     intentionally bundled into the client and CANNOT be hidden).
+//   * The ONLY trusted code path is our Next.js API routes which use the
+//     Firebase Admin SDK (server-only credentials, bypasses these rules).
+//
+// Design:
+//   * `products`, `settings`, `sizes` are PUBLIC catalog data — anyone
+//     visiting the store needs to read them, so we allow client reads.
+//     All writes are denied → must go through /api/admin/* (Admin SDK).
+//   * `orders` are private — no client reads, no client writes. Customers
+//     submit orders through /api/orders (validates payload, writes via
+//     Admin SDK). Admins read/manage them through /api/admin/orders.
+//   * Anything else is denied by default.
+//
+// We deliberately do NOT use `request.auth` checks anywhere — this project
+// uses a custom JWT cookie session (src/lib/auth.ts), NOT Firebase Auth.
+// The "admin" identity exists only on the Next.js server. Any rule that
+// trusted `request.auth` here would be checking a different signal.
+//
+// Deploy:
+//   firebase deploy --only firestore:rules
+// =============================================================
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Products: public read (storefront), open write (admin protected at API layer via JWT cookie)
+    // -----------------------------------------------------------
+    // Public catalog data — readable by storefront, never writable
+    // from the client. Admin writes flow through /api/admin/* and
+    // bypass these rules entirely via the Admin SDK.
+    // -----------------------------------------------------------
     match /products/{productId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if false;
     }
 
-    // Settings (announcement bar, socials, WhatsApp): public read, open write
     match /settings/{docId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if false;
     }
 
-    // Orders: open for admin (no public storefront read)
+    match /sizes/{sizeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // -----------------------------------------------------------
+    // Orders — fully locked down on the client.
+    //   * Customer submits a cart  → /api/orders          (Admin SDK)
+    //   * Admin lists / updates    → /api/admin/orders/*  (Admin SDK)
+    // Neither path uses the web SDK, so denying everything here is
+    // safe and prevents the order log from being read by competitors
+    // or tampered with (status, totals, etc.) by malicious clients.
+    // -----------------------------------------------------------
     match /orders/{orderId} {
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    // -----------------------------------------------------------
+    // Default-deny for any future collection we haven't audited.
+    // -----------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

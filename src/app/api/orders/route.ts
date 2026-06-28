@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addOrderFs, isFirebaseConfigured } from "@/lib/firestore";
+import { addOrderServer, isAdminConfigured } from "@/lib/firestoreServer";
 import type { Order, OrderItem } from "@/types";
 
 // Public endpoint — customers submit their cart here.
 // No admin auth required (anyone shopping can create an order for themselves).
+//
+// SECURITY: this route is the ONLY way a customer can write to Firestore.
+// The rules deny all client-side writes to /orders/* — this route runs on the
+// server with the Admin SDK, validates the payload, then writes on behalf of
+// the visitor. That prevents tampering with totals, status, or arbitrary fields.
 export async function POST(req: NextRequest) {
-  if (!isFirebaseConfigured) {
+  if (!isAdminConfigured()) {
     return NextResponse.json(
       { error: "نظام الطلبات غير مهيأ حالياً." },
       { status: 500 }
@@ -21,16 +26,28 @@ export async function POST(req: NextRequest) {
       currency: string;
     };
 
-    // Validation
+    // Validation — these are the only fields we trust from the client.
     if (!body.customerName?.trim() || !body.customerPhone?.trim()) {
       return NextResponse.json(
         { error: "الاسم ورقم الهاتف مطلوبان" },
         { status: 400 }
       );
     }
+    if (body.customerName.length > 200 || body.customerPhone.length > 50) {
+      return NextResponse.json(
+        { error: "الاسم أو رقم الهاتف طويل جداً" },
+        { status: 400 }
+      );
+    }
     if (!Array.isArray(body.items) || body.items.length === 0) {
       return NextResponse.json(
         { error: "السلة فارغة — أضف منتجاً على الأقل" },
+        { status: 400 }
+      );
+    }
+    if (body.items.length > 50) {
+      return NextResponse.json(
+        { error: "عدد المنتجات في السلة كبير جداً" },
         { status: 400 }
       );
     }
@@ -41,6 +58,18 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+      if (item.quantity > 100) {
+        return NextResponse.json(
+          { error: "كمية غير معقولة لأحد المنتجات" },
+          { status: 400 }
+        );
+      }
+    }
+    if (typeof body.totalPrice !== "number" || body.totalPrice < 0) {
+      return NextResponse.json(
+        { error: "السعر الإجمالي غير صالح" },
+        { status: 400 }
+      );
     }
 
     const orderId = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random()
@@ -68,12 +97,13 @@ export async function POST(req: NextRequest) {
       customerName: body.customerName.trim(),
       customerPhone: body.customerPhone.trim(),
       notes: body.notes?.trim() || undefined,
+      // Status is hard-coded server-side — clients cannot start at "completed"
       status: "pending",
       items: body.items,
       createdAt: new Date().toISOString(),
     };
 
-    await addOrderFs(order);
+    await addOrderServer(order);
 
     return NextResponse.json({ success: true, orderId });
   } catch (err) {

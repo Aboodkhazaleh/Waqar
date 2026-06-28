@@ -12,7 +12,11 @@ import {
   Truck,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { subscribeOrders, subscribeProducts } from "@/lib/firestore";
+import { subscribeProducts } from "@/lib/firestore";
+
+// Orders are admin-only data → poll the auth-gated API instead of using
+// onSnapshot (which would require client-readable rules on /orders).
+const ORDERS_POLL_INTERVAL_MS = 20_000;
 
 interface Props {
   initialProducts: Product[];
@@ -31,13 +35,28 @@ export default function DashboardClient({ initialProducts, initialOrders }: Prop
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
 
-  // Real-time Firestore subscriptions
+  // Products are public-read → real-time subscription is safe.
+  // Orders are admin-only → poll the protected API on an interval.
   useEffect(() => {
     const unsubP = subscribeProducts((next) => setProducts(next));
-    const unsubO = subscribeOrders((next) => setOrders(next));
+
+    let cancelled = false;
+    const refreshOrders = async () => {
+      try {
+        const res = await fetch("/api/admin/orders", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as Order[];
+        if (!cancelled && Array.isArray(data)) setOrders(data);
+      } catch {
+        // Network blip — keep last known state.
+      }
+    };
+    const id = setInterval(refreshOrders, ORDERS_POLL_INTERVAL_MS);
+
     return () => {
       unsubP();
-      unsubO();
+      cancelled = true;
+      clearInterval(id);
     };
   }, []);
 

@@ -34,6 +34,14 @@ yarn-error.log*
 .env.production
 .env.development
 
+# Firebase Admin SDK service account JSON — NEVER commit this file
+firebase-service-account*.json
+service-account*.json
+*-firebase-adminsdk-*.json
+
+# Firebase CLI local project pointer (safe to commit but optional)
+# .firebaserc
+
 # vercel
 .vercel
 

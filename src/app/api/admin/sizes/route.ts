@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
-  fetchSizes,
-  upsertSize,
-  deleteSize,
-  replaceAllSizes,
-  isFirebaseConfigured,
-} from "@/lib/firestore";
+  fetchSizesServer,
+  upsertSizeServer,
+  deleteSizeServer,
+  replaceAllSizesServer,
+  isAdminConfigured,
+} from "@/lib/firestoreServer";
 import type { Size } from "@/types";
 
 function notConfigured() {
   return NextResponse.json(
-    { error: "Firestore غير مهيأ. أضف بيانات Firebase في .env.local." },
+    { error: "Firebase Admin SDK غير مهيأ. أضف بيانات service account في .env.local." },
     { status: 500 }
   );
 }
@@ -28,20 +28,20 @@ function validateSize(size: Partial<Size>): string | null {
 export async function GET() {
   const authed = await isAdminAuthenticated();
   if (!authed) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  return NextResponse.json(await fetchSizes());
+  return NextResponse.json(await fetchSizesServer());
 }
 
 // Create or update a single size
 export async function POST(req: NextRequest) {
   const authed = await isAdminAuthenticated();
   if (!authed) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  if (!isFirebaseConfigured) return notConfigured();
+  if (!isAdminConfigured()) return notConfigured();
   try {
     const size: Size = await req.json();
     const err = validateSize(size);
     if (err) return NextResponse.json({ error: err }, { status: 400 });
     // Ensure no duplicate labels (case-insensitive) among ACTIVE sizes
-    const existing = await fetchSizes();
+    const existing = await fetchSizesServer();
     const duplicate = existing.find(
       (s) =>
         s.id !== size.id &&
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    await upsertSize(size);
+    await upsertSizeServer(size);
     return NextResponse.json({ success: true, size });
   } catch (err) {
     return NextResponse.json(
@@ -67,14 +67,14 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const authed = await isAdminAuthenticated();
   if (!authed) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  if (!isFirebaseConfigured) return notConfigured();
+  if (!isAdminConfigured()) return notConfigured();
   try {
     const sizes: Size[] = await req.json();
     for (const s of sizes) {
       const err = validateSize(s);
       if (err) return NextResponse.json({ error: `${s.id}: ${err}` }, { status: 400 });
     }
-    await replaceAllSizes(sizes);
+    await replaceAllSizesServer(sizes);
     return NextResponse.json({ success: true, count: sizes.length });
   } catch (err) {
     return NextResponse.json(
@@ -87,11 +87,11 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const authed = await isAdminAuthenticated();
   if (!authed) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  if (!isFirebaseConfigured) return notConfigured();
+  if (!isAdminConfigured()) return notConfigured();
   try {
     const { id } = (await req.json()) as { id: string };
     if (!id) return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
-    await deleteSize(id);
+    await deleteSizeServer(id);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(

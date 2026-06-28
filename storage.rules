@@ -1,0 +1,40 @@
+// =============================================================
+// Waqar — Production Cloud Storage Security Rules
+// =============================================================
+//
+// What's in the bucket:
+//   * Product images, uploaded by the admin through /api/admin/upload.
+//   * They live under products/<slug>/<filename>.
+//   * They are referenced by <img>/<Image> tags everywhere on the
+//     storefront, so they must be readable by anyone with the URL.
+//
+// Trust boundary:
+//   * Reads — public (storefront needs to render images).
+//   * Writes / deletes — denied for ALL clients. Uploads happen on
+//     the Next.js server via the Admin SDK (/api/admin/upload),
+//     which bypasses these rules. Deletes go through
+//     /api/admin/delete-image the same way.
+//   * As with Firestore, we don't use Firebase Auth — there is no
+//     `request.auth` to check.
+//
+// Deploy:
+//   firebase deploy --only storage
+// =============================================================
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Product imagery — public read, no client writes.
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Default-deny everywhere else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

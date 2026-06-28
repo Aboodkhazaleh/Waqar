@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { firebaseStorage } from "@/lib/firebase";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { adminBucket, isAdminConfigured } from "@/lib/firebaseAdmin";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     const urls: string[] = [];
     const errors: string[] = [];
 
-    // Branch: Firebase Storage if configured, else local disk
-    const useFirebaseStorage = !!firebaseStorage;
+    // Branch: Firebase Storage (via Admin SDK) if configured, else local disk.
+    const useFirebaseStorage = isAdminConfigured();
 
     let localDir: string | null = null;
     if (!useFirebaseStorage) {
@@ -71,12 +71,25 @@ export async function POST(req: NextRequest) {
       const rand = Math.random().toString(36).slice(2, 8);
       const filename = `${colorId}-${timestamp}-${rand}.${ext}`;
 
-      if (useFirebaseStorage && firebaseStorage) {
-        // Upload to Firebase Storage → public download URL
+      if (useFirebaseStorage) {
+        // Upload via Admin SDK — bypasses Storage Rules.
+        // Generate a download token so the URL is publicly fetchable without
+        // needing a signed URL or relaxed Storage rules.
         const objectPath = `products/${productSlug}/${filename}`;
-        const fileRef = storageRef(firebaseStorage, objectPath);
-        await uploadBytes(fileRef, buffer, { contentType: file.type });
-        const url = await getDownloadURL(fileRef);
+        const token = crypto.randomUUID();
+        const bucket = adminBucket();
+        const fileRef = bucket.file(objectPath);
+        await fileRef.save(buffer, {
+          contentType: file.type,
+          resumable: false,
+          metadata: {
+            metadata: {
+              firebaseStorageDownloadTokens: token,
+            },
+          },
+        });
+        const encodedPath = encodeURIComponent(objectPath);
+        const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${token}`;
         urls.push(url);
       } else if (localDir) {
         // Fallback: save to local /public — fine for local dev

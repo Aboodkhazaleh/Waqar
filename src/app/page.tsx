@@ -6,14 +6,17 @@ import HomeSections from "@/components/home/HomeSections";
 import LiveAnnouncementBar from "@/components/home/LiveAnnouncementBar";
 import LiveFinalCTA from "@/components/home/LiveFinalCTA";
 import BrandValues from "@/components/home/BrandValues";
-import { fetchProducts, fetchSettings } from "@/lib/firestore";
+import { fetchProductsServer, fetchSettingsServer } from "@/lib/firestoreServer";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function HomePage() {
   // Initial server-side fetch from Firestore (SSR/SEO + first paint)
-  const [products, settings] = await Promise.all([fetchProducts(), fetchSettings()]);
+  const [products, settings] = await Promise.all([
+    fetchProductsServer(),
+    fetchSettingsServer(),
+  ]);
 
   return (
     <main className="min-h-screen bg-black">

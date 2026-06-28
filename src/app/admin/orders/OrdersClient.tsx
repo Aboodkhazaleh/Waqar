@@ -5,8 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Order } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { Search, Trash2, AlertTriangle, X, Check } from "lucide-react";
-import { subscribeOrders } from "@/lib/firestore";
 import TypedConfirmModal from "@/components/admin/TypedConfirmModal";
+
+// Orders are admin-only data, so they can NOT be exposed to a public
+// onSnapshot subscription. Instead we poll the auth-gated API on an interval —
+// gives near-real-time updates while keeping the collection locked down.
+const ORDERS_POLL_INTERVAL_MS = 15_000;
 
 interface Props {
   initialOrders: Order[];
@@ -38,10 +42,25 @@ export default function OrdersClient({ initialOrders }: Props) {
   const [toast, setToast] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Real-time Firestore subscription
+  // Poll the admin API on an interval (Firestore Security Rules deny client
+  // reads on /orders/* — only the server-side Admin SDK can fetch them).
   useEffect(() => {
-    const unsub = subscribeOrders((next) => setOrders(next));
-    return () => unsub();
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const res = await fetch("/api/admin/orders", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as Order[];
+        if (!cancelled && Array.isArray(data)) setOrders(data);
+      } catch {
+        // Network blip — keep last known state, try again on next tick.
+      }
+    };
+    const id = setInterval(refresh, ORDERS_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
 
   const showToast = (type: "ok" | "err", text: string) => {
